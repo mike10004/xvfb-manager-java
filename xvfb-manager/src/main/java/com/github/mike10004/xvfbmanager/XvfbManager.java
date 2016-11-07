@@ -3,7 +3,10 @@
  */
 package com.github.mike10004.xvfbmanager;
 
-import com.github.mike10004.nativehelper.*;
+import com.github.mike10004.nativehelper.Program;
+import com.github.mike10004.nativehelper.ProgramResult;
+import com.github.mike10004.nativehelper.ProgramWithOutputStrings;
+import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -20,7 +23,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
-import static com.github.mike10004.nativehelper.Program.running;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -70,6 +72,9 @@ public class XvfbManager {
         return String.format(":%d", displayNumber);
     }
 
+    /**
+     * Configuration for Xvfb execution.
+     */
     public static class XvfbConfig {
         public final String geometry;
 
@@ -108,13 +113,21 @@ public class XvfbManager {
         return new DefaultDisplayReadinessChecker();
     }
 
-    public DefaultXvfbController.Builder createControllerBuilder(String display, File framebufferDir) {
+    protected DefaultXvfbController.Builder createControllerBuilder(String display, File framebufferDir) {
         return DefaultXvfbController.builder(display)
                 .withReadinessChecker(createDisplayReadinessChecker(display, framebufferDir))
                 .withScreenshooter(createScreenshooter(display, framebufferDir))
                 .withSleeper(createSleeper());
     }
 
+    /**
+     * Starts Xvfb on a given display number, rendering to a file in a given directory.
+     * See {@code Xvfb} man page regarding {@code -fbdir} option for information on the
+     * framebuffer directory contents.
+     * @param displayNumber the display number; can be any positive integer not already in use
+     * @param framebufferDir the framebuffer directory
+     * @return a controller for the process
+     */
     public XvfbController start(int displayNumber, File framebufferDir) {
         String display = toDisplayValue(displayNumber);
         ProgramWithOutputStrings xvfb = Program.running(xvfbExecutable)
@@ -157,14 +170,32 @@ public class XvfbManager {
         }
     }
 
+    /**
+     * Interface for classes that can check whether the display has reached a ready state.
+     */
     public interface DisplayReadinessChecker {
+        /**
+         * Checks whether the display is ready.
+         * @param display the display to check, e.g. ":123"
+         * @return true iff the display is ready
+         */
         boolean checkReadiness(String display);
     }
 
+    /**
+     * Interface for screenshots of the current framebuffer.
+     */
     public interface Screenshot {
+        /**
+         * Gets the pathname of a file containing the screenshot.
+         * @return the file
+         */
         File getRawFile();
     }
 
+    /**
+     * Interface for a class that can capture a screenshot of a virtual framebuffer.
+     */
     public interface Screenshooter {
         Screenshot capture() throws IOException, XvfbException;
     }
