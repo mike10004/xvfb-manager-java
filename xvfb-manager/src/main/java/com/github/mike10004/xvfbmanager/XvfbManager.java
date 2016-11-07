@@ -1,136 +1,202 @@
 /*
- * (c) 2016 Novetta
- *
- * Created by mike
+ * (c) 2016 Mike Chaberski
  */
 package com.github.mike10004.xvfbmanager;
 
 import com.github.mike10004.nativehelper.*;
+import com.google.common.base.Optional;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.commons.io.FileUtils;
+import com.novetta.ibg.common.sys.Whicher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.file.Path;
-import java.util.Collection;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
 import static com.github.mike10004.nativehelper.Program.running;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 public class XvfbManager {
 
-    private static class StandardCallback implements FutureCallback<ProgramResult> {
+    private static final Logger log = LoggerFactory.getLogger(XvfbManager.class);
+
+    private final ExecutorService executorService;
+    private final File xvfbExecutable;
+    private final XvfbConfig xvfbConfig;
+
+    public XvfbManager(ExecutorService executorService, File xvfbExecutable) {
+        this(executorService, xvfbExecutable, XvfbConfig.DEFAULT);
+    }
+
+    /**
+     * Constructs a default instance of the class.
+     * @throws IOException if Xvfb executable cannot be resolved
+     * @see #createDefaultExecutorService()
+     */
+    public XvfbManager() throws IOException {
+        this(createDefaultExecutorService(), resolveXvfbExecutable());
+    }
+
+    public XvfbManager(ExecutorService executorService, File xvfbExecutable, XvfbConfig xvfbConfig) {
+        this.executorService = checkNotNull(executorService);
+        this.xvfbExecutable = checkNotNull(xvfbExecutable);
+        this.xvfbConfig = checkNotNull(xvfbConfig);
+    }
+
+    protected static ExecutorService createDefaultExecutorService() {
+        return Executors.newFixedThreadPool(2, new ThreadFactory() {
+
+            private ThreadFactory defaultThreadFactory = Executors.defaultThreadFactory();
+
+            @Override
+            public Thread newThread(Runnable r) {
+                Thread t = defaultThreadFactory.newThread(r);
+                t.setDaemon(true);
+                return t;
+            }
+        });
+    }
+
+    protected static String toDisplayValue(int displayNumber) {
+        checkArgument(displayNumber >= 0, "displayNumber must be nonnegative");
+        return String.format(":%d", displayNumber);
+    }
+
+    public static class XvfbConfig {
+        public final String geometry;
+
+        public XvfbConfig(String geometry) {
+            this.geometry = checkNotNull(geometry);
+            checkArgument(geometry.matches("\\d+x\\d+x\\d+(?:\\+32)?"), "argument must have form WxHxD where W=width, H=height, and D=depth; default is 1280x1024x24+32");
+        }
+
+        @Override
+        public String toString() {
+            return "XvfbConfig{" +
+                    "geometry='" + geometry + '\'' +
+                    '}';
+        }
+
+        public static final XvfbConfig DEFAULT = new XvfbConfig("1280x1024x24+32");
+    }
+
+    protected static File resolveXvfbExecutable() throws FileNotFoundException {
+        Optional<File> file = Whicher.gnu().which("Xvfb");
+        if (!file.isPresent()) {
+            throw new FileNotFoundException("Xvfb executable");
+        }
+        return file.get();
+    }
+
+    protected Screenshooter createScreenshooter(String display, File framebufferDir) {
+        return new DefaultScreenshooter(display, framebufferDir);
+    }
+
+    protected Sleeper createSleeper() {
+        return Sleeper.DEFAULT;
+    }
+
+    protected DisplayReadinessChecker createDisplayReadinessChecker(String display, File framebufferDir) {
+        return new DefaultDisplayReadinessChecker();
+    }
+
+    public DefaultXvfbController.Builder createControllerBuilder(String display, File framebufferDir) {
+        return DefaultXvfbController.builder(display)
+                .withReadinessChecker(createDisplayReadinessChecker(display, framebufferDir))
+                .withScreenshooter(createScreenshooter(display, framebufferDir))
+                .withSleeper(createSleeper());
+    }
+
+    public XvfbController start(int displayNumber, File framebufferDir) {
+        String display = toDisplayValue(displayNumber);
+        ProgramWithOutputStrings xvfb = Program.running(xvfbExecutable)
+                .args(display)
+                .args("-screen", "0", xvfbConfig.geometry)
+                .args("-fbdir", framebufferDir.getAbsolutePath())
+                .outputToStrings();
+        log.trace("executing {}", xvfb);
+        ListenableFuture<ProgramWithOutputStringsResult> xvfbFuture = xvfb.executeAsync(executorService);
+        Futures.addCallback(xvfbFuture, new LoggingCallback("xvfb") {
+            @Override
+            public void onSuccess(ProgramResult result) {
+                if (result.getExitCode() != 0) {
+                    log.info("Xvfb failure: {}", result);
+                } else {
+                    super.onSuccess(result);
+                }
+            }
+        });
+        DefaultXvfbController controller = createControllerBuilder(display, framebufferDir).build(xvfbFuture);
+        Futures.addCallback(xvfbFuture, new WaitableFlagSetter(controller));
+        return controller;
+    }
+
+    private static class WaitableFlagSetter implements FutureCallback<ProgramWithOutputStringsResult> {
+
+        private final DefaultXvfbController xvfbController;
+
+        private WaitableFlagSetter(DefaultXvfbController xvfbController) {
+            this.xvfbController = xvfbController;
+        }
+
+        @Override
+        public void onSuccess(@Nullable ProgramWithOutputStringsResult result) {
+        }
+
+        @Override
+        public void onFailure(Throwable t) {
+            xvfbController.setAbort(true);
+        }
+    }
+
+    public interface DisplayReadinessChecker {
+        boolean checkReadiness(String display);
+    }
+
+    public interface Screenshot {
+        File getRawFile();
+    }
+
+    public interface Screenshooter {
+        Screenshot capture() throws IOException, XvfbException;
+    }
+
+    static class LoggingCallback implements FutureCallback<ProgramResult> {
 
         private final String name;
 
-        private StandardCallback(String name) {
+        public LoggingCallback(String name) {
             this.name = name;
         }
 
         @Override
         public void onSuccess(ProgramResult result) {
-            System.out.format("%s: %s%n", name, result);
+            log.debug("{}: {}", name, result);
         }
 
         @Override
         public void onFailure(Throwable t) {
             if (t instanceof java.util.concurrent.CancellationException) {
-                System.out.format("%s: cancelled%n", name);
+                log.debug("{}: cancelled", name);
             } else {
-                System.out.format("%s: %s%n", name, t);
+                log.info("{}: {}", name, t);
             }
         }
     }
 
-    public static void main(String[] args) throws Exception {
+    static class DefaultSleeper implements Sleeper {
 
-        ExecutorService executorService = Executors.newFixedThreadPool(4);
-        try {
-            File imageFile = new File(XvfbManager.class.getResource("/example.jpg").toURI());
-            Path buildDir = new File(System.getProperty("user.dir"), "target").toPath();
-            Path framebufferDir = java.nio.file.Files.createTempDirectory(buildDir, "framebuffer");
-            Path outputDir = java.nio.file.Files.createTempDirectory(buildDir, "output");
-            String display = ":71"; // some likely-unsed display number
-            ProgramWithOutputStrings xvfb = Program.running("Xvfb")
-                    .args(display)
-                    .args("-screen", "0", "800x600x24")
-                    .args("-fbdir", framebufferDir.toAbsolutePath().toString())
-                    .outputToStrings();
-            System.out.format("executing %s%n", xvfb);
-            ListenableFuture<ProgramWithOutputStringsResult> xvfbFuture = xvfb.executeAsync(executorService);
-            Futures.addCallback(xvfbFuture, new StandardCallback("xvfb"));
-            System.out.format("%s ready? %s%n", display, isDisplayReady(display));
-            Thread.sleep(501);
-            System.out.format("%s ready? %s%n", display, isDisplayReady(display));
-            try {
-                Program<ProgramWithOutputStringsResult> imageMagickDisplay = running("/usr/bin/display")
-                        .env("DISPLAY", display)
-                        .arg(imageFile.getAbsolutePath())
-                        .outputToStrings();
-                System.out.format("executing %s%n", imageMagickDisplay);
-                ListenableFuture<ProgramWithOutputStringsResult> displayFuture = imageMagickDisplay.executeAsync(executorService);
-                Futures.addCallback(displayFuture, new StandardCallback("imagemagick-display"));
-                try {
-                    sleep(502);
-                    takeScreenshot(display, outputDir);
-                    System.out.println("...done sleeping");
-                    Collection<File> fbFiles = FileUtils.listFiles(outputDir.toFile(), null, true);
-                    System.out.format("framebuffer files: %s%n", fbFiles);
-                } finally {
-                    if (!displayFuture.isDone()) {
-                        System.out.println("killing imagemagick display");
-                        displayFuture.cancel(true);
-                    }
-                }
-            } finally {
-                if (!xvfbFuture.isDone()) {
-                    System.out.println("killing xvfb");
-                    xvfbFuture.cancel(true);
-                }
-            }
-        } finally {
-            System.out.println("shutting down thread executor service");
-            executorService.shutdownNow();
+        @Override
+        public void sleep(long millis) throws InterruptedException {
+            Thread.sleep(millis);
         }
-
-    }
-
-    private static void sleep(long millis) throws InterruptedException {
-        System.out.format("sleeping for %d milliseconds...", millis);
-        Thread.sleep(millis);
-        System.out.format("slept for %d milliseconds", millis);
-    }
-
-    private static void takeScreenshot(String display, Path outputDir) throws IOException {
-        File stdoutFile = outputDir.resolve("output.xwd").toFile(), stderrFile = outputDir.resolve("xwd-stderr").toFile();
-        ProgramWithOutputFilesResult xwdResult = running("xwd")
-                .env("DISPLAY", display)
-                .args("-root", "-silent")
-                .outputToFiles(stdoutFile, stderrFile)
-                .execute();
-        System.out.format("xwd: %s%n", xwdResult);
-        if (xwdResult.getExitCode() != 0) {
-            java.nio.file.Files.copy(stderrFile.toPath(), System.out);
-            return;
-        }
-        File pnmFile = outputDir.resolve("output.pnm").toFile(), pnmStderrFile = outputDir.resolve("xwdtopnm-stderr").toFile();
-        ProgramWithOutputFilesResult xwdtopnmResult = running("xwdtopnm")
-                .arg(stdoutFile.getAbsolutePath())
-                .outputToFiles(pnmFile, pnmStderrFile)
-                .execute();
-        System.out.format("xwdtopnm: %s%n", xwdtopnmResult);
-    }
-
-    // https://askubuntu.com/questions/60586/how-to-check-if-xvfb-is-already-running-on-display-0
-    private static boolean isDisplayReady(String display) throws IOException {
-        ProgramWithOutputStringsResult result = running("xdpyinfo")
-                .args("-display", display)
-                .outputToStrings()
-                .execute();
-        System.out.format("xdpyinfo: %s%n", result);
-        return result.getExitCode() == 0;
     }
 }
