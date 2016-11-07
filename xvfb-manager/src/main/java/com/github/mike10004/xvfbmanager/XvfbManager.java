@@ -30,25 +30,25 @@ public class XvfbManager {
 
     private static final Logger log = LoggerFactory.getLogger(XvfbManager.class);
 
-    private final ExecutorService executorService;
     private final File xvfbExecutable;
     private final XvfbConfig xvfbConfig;
-
-    public XvfbManager(ExecutorService executorService, File xvfbExecutable) {
-        this(executorService, xvfbExecutable, XvfbConfig.DEFAULT);
-    }
 
     /**
      * Constructs a default instance of the class.
      * @throws IOException if Xvfb executable cannot be resolved
-     * @see #createDefaultExecutorService()
+     * @see #resolveXvfbExecutable()
      */
     public XvfbManager() throws IOException {
-        this(createDefaultExecutorService(), resolveXvfbExecutable());
+        this(resolveXvfbExecutable(), XvfbConfig.DEFAULT);
     }
 
-    public XvfbManager(ExecutorService executorService, File xvfbExecutable, XvfbConfig xvfbConfig) {
-        this.executorService = checkNotNull(executorService);
+    /**
+     * Constructs an instance of the class that will launch the given executable
+     * with the given configuration.
+     * @param xvfbExecutable pathname of the {@code Xvfb} executable
+     * @param xvfbConfig virtual framebuffer configuration
+     */
+    public XvfbManager(File xvfbExecutable, XvfbConfig xvfbConfig) {
         this.xvfbExecutable = checkNotNull(xvfbExecutable);
         this.xvfbConfig = checkNotNull(xvfbConfig);
     }
@@ -70,27 +70,6 @@ public class XvfbManager {
     protected static String toDisplayValue(int displayNumber) {
         checkArgument(displayNumber >= 0, "displayNumber must be nonnegative");
         return String.format(":%d", displayNumber);
-    }
-
-    /**
-     * Configuration for Xvfb execution.
-     */
-    public static class XvfbConfig {
-        public final String geometry;
-
-        public XvfbConfig(String geometry) {
-            this.geometry = checkNotNull(geometry);
-            checkArgument(geometry.matches("\\d+x\\d+x\\d+(?:\\+32)?"), "argument must have form WxHxD where W=width, H=height, and D=depth; default is 1280x1024x24+32");
-        }
-
-        @Override
-        public String toString() {
-            return "XvfbConfig{" +
-                    "geometry='" + geometry + '\'' +
-                    '}';
-        }
-
-        public static final XvfbConfig DEFAULT = new XvfbConfig("1280x1024x24+32");
     }
 
     protected static File resolveXvfbExecutable() throws FileNotFoundException {
@@ -120,6 +99,10 @@ public class XvfbManager {
                 .withSleeper(createSleeper());
     }
 
+    public XvfbController start(int displayNumber, File framebufferDir) {
+        return start(displayNumber, framebufferDir, createDefaultExecutorService());
+    }
+
     /**
      * Starts Xvfb on a given display number, rendering to a file in a given directory.
      * See {@code Xvfb} man page regarding {@code -fbdir} option for information on the
@@ -128,7 +111,7 @@ public class XvfbManager {
      * @param framebufferDir the framebuffer directory
      * @return a controller for the process
      */
-    public XvfbController start(int displayNumber, File framebufferDir) {
+    public XvfbController start(int displayNumber, File framebufferDir, ExecutorService executorService) {
         String display = toDisplayValue(displayNumber);
         ProgramWithOutputStrings xvfb = Program.running(xvfbExecutable)
                 .args(display)
