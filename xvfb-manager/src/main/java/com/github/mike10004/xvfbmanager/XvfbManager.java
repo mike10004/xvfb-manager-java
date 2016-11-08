@@ -29,6 +29,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class XvfbManager {
 
     private static final Logger log = LoggerFactory.getLogger(XvfbManager.class);
+    private static final int SCREEN = 0;
 
     private final File xvfbExecutable;
     private final XvfbConfig xvfbConfig;
@@ -81,7 +82,7 @@ public class XvfbManager {
     }
 
     protected Screenshooter createScreenshooter(String display, File framebufferDir) {
-        return new DefaultScreenshooter(display, framebufferDir);
+        return new FramebufferDirScreenshooter(display, framebufferDir, SCREEN, framebufferDir);
     }
 
     protected Sleeper createSleeper() {
@@ -115,7 +116,7 @@ public class XvfbManager {
         String display = toDisplayValue(displayNumber);
         ProgramWithOutputStrings xvfb = Program.running(xvfbExecutable)
                 .args(display)
-                .args("-screen", "0", xvfbConfig.geometry)
+                .args("-screen", String.valueOf(SCREEN), xvfbConfig.geometry)
                 .args("-fbdir", framebufferDir.getAbsolutePath())
                 .outputToStrings();
         log.trace("executing {}", xvfb);
@@ -174,6 +175,8 @@ public class XvfbManager {
          * @return the file
          */
         File getRawFile();
+
+        void convertToPnmFile(File pnmFile) throws IOException;
     }
 
     /**

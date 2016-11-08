@@ -119,7 +119,7 @@ public class DefaultXvfbController implements XvfbController {
             this.display = checkNotNull(display);
             checkArgument(!display.isEmpty(), "display variable value must be nonempty");
             this.sleeper = Sleeper.DEFAULT;
-            this.screenshooter = new DefaultScreenshooter(display, FileUtils.getTempDirectory());
+            this.screenshooter = new XwdScreenshooter(display, FileUtils.getTempDirectory());
         }
 
         public Builder withReadinessChecker(XvfbManager.DisplayReadinessChecker checker) {
