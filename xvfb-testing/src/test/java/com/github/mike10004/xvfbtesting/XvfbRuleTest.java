@@ -9,14 +9,19 @@ import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
 import com.github.mike10004.xvfbmanager.TreeNode;
 import com.github.mike10004.xvfbmanager.XvfbController;
 import com.github.mike10004.xvfbmanager.XvfbController.XWindow;
+import com.google.common.io.CharSource;
+import com.google.common.io.LineProcessor;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.commons.lang3.StringUtils;
+import org.junit.Assume;
+import org.junit.BeforeClass;
 
 import javax.annotation.Nullable;
 import java.awt.Rectangle;
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutorService;
@@ -37,6 +42,15 @@ public class XvfbRuleTest {
 
     private static final int FIRST_DISPLAY_NUMBER = 99; // if host has more displays than this number already active, problems will ensue
     private static final AtomicInteger displayNumbers = new AtomicInteger(FIRST_DISPLAY_NUMBER);
+
+    @BeforeClass
+    public static void checkPrerequsities() {
+        for (String packageName : new String[]{"x11-utils", "xdotool"}) {
+            boolean installed = queryPackageInstalled(packageName);
+            Assume.assumeTrue(packageName + " must be installed for these tests to be executed", installed);
+        }
+
+    }
 
     private static abstract class RuleUser {
 
@@ -187,4 +201,25 @@ public class XvfbRuleTest {
             }
         }
     }
+
+    private static boolean queryPackageInstalled(String packageName) {
+        try {
+            ProgramWithOutputStringsResult result = Program.running("dpkg-query")
+                    .args("-l", packageName)
+                    .outputToStrings()
+                    .execute();
+            System.out.format("dpkg-query: %d%n", result.getExitCode());
+            if (result.getExitCode() == 0) {
+                System.out.println(result.getStdoutString());
+            } else {
+                System.out.println(result.getStderrString());
+            }
+            return result.getExitCode() == 0;
+        } catch (Exception e) {
+            System.err.println("failed to query package status");
+            e.printStackTrace(System.err);
+            return false;
+        }
+    }
+
 }

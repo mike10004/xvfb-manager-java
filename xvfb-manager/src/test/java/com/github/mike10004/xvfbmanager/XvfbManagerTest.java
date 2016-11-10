@@ -15,13 +15,16 @@ import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.io.CharSource;
 import com.google.common.io.Files;
+import com.google.common.io.LineProcessor;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.novetta.ibg.common.image.ImageInfo;
 import com.novetta.ibg.common.image.ImageInfos;
 import com.novetta.ibg.common.sys.Platforms;
 import com.novetta.ibg.common.sys.Whicher;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
@@ -66,7 +69,21 @@ public class XvfbManagerTest {
 
     @org.junit.Test
     public void start_autoDisplay_trueColor() throws Exception {
+        Assume.assumeTrue("xvfb version not high enough to test auto-display support", checkAutoDisplaySupport());
         testWithConfigAndDisplay(new XvfbConfig("640x480x24"), null);
+    }
+
+    private static boolean checkAutoDisplaySupport() throws IOException {
+        String version = queryPackageVersion("xvfb");
+        Matcher m = Pattern.compile("\\d+:(\\d+)\\.(\\d+)\\b.*").matcher(version);
+        if (m.find()) {
+            String majorStr = m.group(1);
+            String minorStr = m.group(2);
+            int major = Integer.parseInt(majorStr), minor = Integer.parseInt(minorStr);
+            System.out.format("xvfb version \"%s\" parsed to (major, minor) = (%d, %d)%n", version, major, minor);
+            return major > 1 || (major >= 1 && minor >= 13);
+        }
+        throw new IllegalStateException("unexpected xvfb version string: " + version);
     }
 
     @org.junit.Test
@@ -226,4 +243,32 @@ public class XvfbManagerTest {
         }
         return true;
     }
+
+    private static String queryPackageVersion(String packageName) throws IOException {
+        ProgramWithOutputStringsResult result = Program.running("dpkg-query")
+                .args("--status", packageName)
+                .outputToStrings()
+                .execute();
+        String stdout = result.getStdoutString();
+        String version = CharSource.wrap(stdout).readLines(new LineProcessor<String>(){
+
+            private String version;
+
+            @Override
+            public boolean processLine(String line) throws IOException {
+                if (line.startsWith("Version: ")) {
+                    version = StringUtils.removeStart(line, "Version: ").trim();
+                    return false;
+                }
+                return true;
+            }
+
+            @Override
+            public String getResult() {
+                return version;
+            }
+        });
+        return version;
+    }
+
 }
