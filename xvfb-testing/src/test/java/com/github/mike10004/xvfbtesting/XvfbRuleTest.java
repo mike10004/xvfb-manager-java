@@ -46,7 +46,7 @@ public class XvfbRuleTest {
             if (displayNumber == null) {
                 xvfb = new XvfbRule();
             } else {
-                xvfb = new XvfbRule(displayNumber.intValue());
+                xvfb = XvfbRule.builder().onDisplay(displayNumber.intValue()).build();
             }
         }
 

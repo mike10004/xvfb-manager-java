@@ -4,6 +4,7 @@
 package com.github.mike10004.xvfbtesting;
 
 import com.github.mike10004.xvfbmanager.XvfbController;
+import com.github.mike10004.xvfbmanager.XvfbException;
 import com.github.mike10004.xvfbmanager.XvfbManager;
 import com.novetta.ibg.common.sys.Platforms;
 import org.junit.rules.ExternalResource;
@@ -20,26 +21,57 @@ public class XvfbRule extends ExternalResource {
 
     private final TemporaryFolder temporaryFolder;
     private final @Nullable Integer initialDisplayNumber;
+    private final XvfbManager xvfbManager;
     private transient XvfbController xvfbController;
     private final boolean disabled;
 
     public XvfbRule() {
-        this(false);
+        this(createDefaultXvfbManager(), null, false);
     }
 
-    public XvfbRule(boolean disabled) {
-        this(null, disabled, null);
+    public static Builder builder() {
+        return new Builder();
     }
 
-    public XvfbRule(int displayNumber) {
-        this(displayNumber, false);
+    public static class Builder {
+        private XvfbManager xvfbManager;
+        private boolean disabled;
+        private @Nullable Integer displayNumber;
+
+        public XvfbRule build() {
+            return new XvfbRule(xvfbManager == null ? createDefaultXvfbManager() : xvfbManager, displayNumber, disabled);
+        }
+
+        public Builder manager(XvfbManager xvfbManager) {
+            this.xvfbManager = checkNotNull(xvfbManager);
+            return this;
+        }
+
+        public Builder disabled() {
+            disabled = true;
+            return this;
+        }
+
+        public Builder disabledOnWindows() {
+            if (Platforms.getPlatform().isWindows()) {
+                disabled = true;
+            }
+            return this;
+        }
+
+        public Builder autoDisplay() {
+            displayNumber = null;
+            return this;
+        }
+
+        public Builder onDisplay(int displayNumber) {
+            this.displayNumber = checkDisplayNumber(displayNumber);
+            return this;
+        }
     }
 
-    public XvfbRule(int displayNumber, boolean disabled) {
-        this(displayNumber, disabled, (Void) null);
-    }
-
-    private XvfbRule(@Nullable Integer displayNumber, boolean disabled, @Nullable Void unused) {
+    private XvfbRule(XvfbManager xvfbManager, @Nullable Integer displayNumber, boolean disabled) {
+        this.xvfbManager = checkNotNull(xvfbManager);
         temporaryFolder = new TemporaryFolder();
         initialDisplayNumber = displayNumber;
         if (initialDisplayNumber != null) {
@@ -49,15 +81,11 @@ public class XvfbRule extends ExternalResource {
         checkArgument(disabled || !Platforms.getPlatform().isWindows(), "rule must be disabled on Windows platforms");
     }
 
-    protected XvfbManager createXvfbManager(TemporaryFolder temporaryFolder) {
-        return createDefaultXvfbManager(temporaryFolder);
-    }
-
-    static XvfbManager createDefaultXvfbManager(TemporaryFolder temporaryFolder) {
+    static XvfbManager createDefaultXvfbManager() {
         try {
-            return new XvfbManager(temporaryFolder.getRoot().toPath());
+            return new XvfbManager();
         } catch (IOException e) {
-            throw new IllegalStateException(e);
+            throw new XvfbException("XvfbManager construction failed", e);
         }
     }
 
@@ -76,7 +104,6 @@ public class XvfbRule extends ExternalResource {
         checkState(xvfbController == null, "xvfbController already created");
         if (!disabled) {
             temporaryFolder.create();
-            XvfbManager xvfbManager = createXvfbManager(temporaryFolder);
             if (initialDisplayNumber != null) {
                 xvfbController = xvfbManager.start(initialDisplayNumber);
             } else {
