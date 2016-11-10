@@ -74,27 +74,6 @@ public class XvfbManagerTest {
         testWithConfigAndDisplay(new XvfbConfig("640x480x24"), PRESUMABLY_VACANT_DISPLAY_NUM);
     }
 
-    @org.junit.Test
-    public void simplestExecution() throws Exception {
-        XvfbManager manager = new XvfbManager();
-        try (XvfbController controller = manager.start()) {
-            controller.waitUntilReady();
-            final String display = controller.getDisplay();
-            // start a graphical program on a different thread
-            Future<Process> processFuture = Executors.newSingleThreadExecutor().submit(new Callable<Process>(){
-                @Override
-                public Process call() throws Exception {
-                    ProcessBuilder pb = new ProcessBuilder();
-                    pb.environment().put("DISPLAY", display);
-                    return pb.command("xclock").start();
-                }
-            });
-            Screenshot screenshot = controller.captureScreenshot();
-            // do something with screenshot
-            processFuture.cancel(true);
-        }
-    }
-
     private void testWithConfigAndDisplay(XvfbConfig config, @Nullable Integer displayNumber) throws Exception {
         Assume.assumeFalse("supported platforms are Linux and MacOS", Platforms.getPlatform().isWindows());
         Assume.assumeTrue("imagemagick must be installed", isImageMagickInstalled());
