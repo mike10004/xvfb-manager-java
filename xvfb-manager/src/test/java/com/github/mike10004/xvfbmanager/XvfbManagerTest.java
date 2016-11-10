@@ -8,18 +8,25 @@ import com.galenframework.rainbow4j.Spectrum;
 import com.galenframework.rainbow4j.colorscheme.ColorDistribution;
 import com.github.mike10004.nativehelper.Program;
 import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
-import com.google.common.base.Converter;
+import com.github.mike10004.xvfbmanager.XvfbController.XWindow;
+import com.github.mike10004.xvfbmanager.XvfbManager.Screenshot;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.io.Files;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.novetta.ibg.common.image.ImageInfo;
+import com.novetta.ibg.common.image.ImageInfos;
 import com.novetta.ibg.common.sys.Platforms;
+import com.novetta.ibg.common.sys.Whicher;
 import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nullable;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import java.awt.*;
@@ -27,18 +34,27 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.charset.Charset;
+import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.github.mike10004.nativehelper.Program.running;
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class XvfbManagerTest {
+
+    private static final int PRESUMABLY_VACANT_DISPLAY_NUM = 99;
 
     @Rule
     public TemporaryFolder tmp = new TemporaryFolder();
@@ -49,10 +65,40 @@ public class XvfbManagerTest {
     }
 
     @org.junit.Test
-    public void start() throws Exception {
+    public void start_autoDisplay_trueColor() throws Exception {
+        testWithConfigAndDisplay(new XvfbConfig("640x480x24"), null);
+    }
+
+    @org.junit.Test
+    public void start_specifiedDisplay_trueColor() throws Exception {
+        testWithConfigAndDisplay(new XvfbConfig("640x480x24"), PRESUMABLY_VACANT_DISPLAY_NUM);
+    }
+
+    @org.junit.Test
+    public void simplestExecution() throws Exception {
+        XvfbManager manager = new XvfbManager();
+        try (XvfbController controller = manager.start()) {
+            controller.waitUntilReady();
+            final String display = controller.getDisplay();
+            // start a graphical program on a different thread
+            Future<Process> processFuture = Executors.newSingleThreadExecutor().submit(new Callable<Process>(){
+                @Override
+                public Process call() throws Exception {
+                    ProcessBuilder pb = new ProcessBuilder();
+                    pb.environment().put("DISPLAY", display);
+                    return pb.command("xclock").start();
+                }
+            });
+            Screenshot screenshot = controller.captureScreenshot();
+            // do something with screenshot
+            processFuture.cancel(true);
+        }
+    }
+
+    private void testWithConfigAndDisplay(XvfbConfig config, @Nullable Integer displayNumber) throws Exception {
         Assume.assumeFalse("supported platforms are Linux and MacOS", Platforms.getPlatform().isWindows());
-        Assume.assumeTrue("imagemagick must be installed", Images.isImageMagickInstalled());
-        XvfbManager instance = new XvfbManager() {
+        Assume.assumeTrue("imagemagick must be installed", isImageMagickInstalled());
+        XvfbManager instance = new XvfbManager(config) {
             @Override
             protected DisplayReadinessChecker createDisplayReadinessChecker(String display, File framebufferDir) {
                 return new DefaultDisplayReadinessChecker() {
@@ -63,75 +109,97 @@ public class XvfbManagerTest {
                 };
             }
         };
-        int displayNum = 23;
+        Path scratchDir = tmp.newFolder().toPath();
+        try (XvfbController ctrl = (displayNumber == null ? instance.start(scratchDir) : instance.start(displayNumber, scratchDir))) {
+            testUsingController(ctrl, config, true);
+        }
+    }
+
+    private void testUsingController(XvfbController ctrl, XvfbConfig config, boolean takeScreenshots) throws InterruptedException, IOException, URISyntaxException {
         File imageFile = new File(XvfbManager.class.getResource("/example.jpg").toURI());
-        try (XvfbController ctrl = instance.start(displayNum, tmp.newFolder())) {
-            ctrl.waitUntilReady();
+        ctrl.waitUntilReady();
+        if (takeScreenshots) {
+            System.out.println("capturing screenshot before launching x program");
             XvfbManager.Screenshot beforeScreenshot = ctrl.captureScreenshot();
-            assertScreenshotAllBlack(beforeScreenshot, true);
-            ListenableFuture<ProgramWithOutputStringsResult> graphicalProgramFuture = launchProgramOnDisplay(displayNum, imageFile);
-            String filename = imageFile.getName();
-            String expectedWindowName = "ImageMagick: " + filename;
-            boolean imageMagickWindowOpened = new XWindowPoller(":" + displayNum, expectedWindowName, Predicates.containsPattern("\\bImageMagick\\b")).poll(100, 20);
-            checkState(imageMagickWindowOpened, "never saw image magick window");
-            XvfbManager.Screenshot afterScreenshot = ctrl.captureScreenshot();
-            assertScreenshotAllBlack(afterScreenshot, false);
-            graphicalProgramFuture.cancel(true);
+            checkScreenshot(beforeScreenshot, true, config);
         }
-    }
-
-    private static class XWindowPoller extends Poller {
-
-        private final String display;
-        private final Predicate<? super String> stdoutPredicate;
-        private final String expectedWindowName;
-
-        public XWindowPoller(String display, String expectedWindowName, Predicate<? super String> stdoutPredicate) {
-            super(Sleeper.DEFAULT);
-            this.expectedWindowName = expectedWindowName;
-            this.display = display;
-            this.stdoutPredicate = stdoutPredicate;
-        }
-
-        @Override
-        protected boolean check(int pollAttemptsSoFar) {
-            ProgramWithOutputStringsResult result = Program.running("xwininfo")
-                    .env("DISPLAY", display)
-                    .args("-name", expectedWindowName)
-                    .outputToStrings()
-                    .execute();
-
-            if (result.getExitCode() == 0) {
-                String stdout = result.getStdoutString();
-                boolean found = stdoutPredicate.apply(stdout);
-                if (found) {
-                    System.out.println(stdout);
-                }
-                return found;
-            } else {
-                System.out.format("xwininfo: %s%n", result);
+        String display = ctrl.getDisplay();
+        System.out.format("xvfb is on display %s%n", display);
+        ListenableFuture<ProgramWithOutputStringsResult> graphicalProgramFuture = launchProgramOnDisplay(display, imageFile);
+        String filename = imageFile.getName();
+        final String expectedWindowName = "ImageMagick: " + filename;
+        Optional<TreeNode<XWindow>> window = ctrl.pollForWindow(new Predicate<XWindow>() {
+            @Override
+            public boolean apply(XWindow input) {
+                return expectedWindowName.equals(input.title);
             }
-            return false;
+        }, 250, 4);
+        checkState(window.isPresent(), "never saw image magick window");
+        if (takeScreenshots) {
+            System.out.println("capturing screenshot after launching x program");
+            XvfbManager.Screenshot afterScreenshot = ctrl.captureScreenshot();
+            checkScreenshot(afterScreenshot, false, config);
         }
+        graphicalProgramFuture.cancel(true);
     }
 
-    private ListenableFuture<ProgramWithOutputStringsResult> launchProgramOnDisplay(int displayNum, File imageFile) throws URISyntaxException {
-        String display = XvfbManager.toDisplayValue(displayNum);
+    private ListenableFuture<ProgramWithOutputStringsResult> launchProgramOnDisplay(String display, File imageFile) throws URISyntaxException {
         Program<ProgramWithOutputStringsResult> imageMagickDisplay = running("/usr/bin/display")
                 .env("DISPLAY", display)
                 .arg(imageFile.getAbsolutePath())
                 .outputToStrings();
         System.out.format("executing %s%n", imageMagickDisplay);
         ListenableFuture<ProgramWithOutputStringsResult> displayFuture = imageMagickDisplay.executeAsync(Executors.newSingleThreadExecutor());
-        Futures.addCallback(displayFuture, new XvfbManager.LoggingCallback("imagemagick-display"));
+        Futures.addCallback(displayFuture, new XvfbManager.LoggingCallback("imagemagick-display", Charset.defaultCharset()));
         return displayFuture;
     }
 
-    private void assertScreenshotAllBlack(XvfbManager.Screenshot screenshot, boolean expected) throws IOException {
-        Converter<File, File> xwdToPnm = new Images.XwdToPnmConverter(tmp.newFile(), tmp.getRoot().toPath());
-        File pnmFile = checkNotNull(xwdToPnm.convert(screenshot.getRawFile()));
+    private static class ScreenSpace {
+        public final int width;
+        public final int height;
+        public final int depth;
+
+        public ScreenSpace(int width, int height, int depth) {
+            this.width = width;
+            this.height = height;
+            this.depth = depth;
+        }
+
+        public static ScreenSpace parse(String arg) {
+            Matcher m = Pattern.compile("^(\\d+)x(\\d+)x(\\d+)(\\+\\d+)?$").matcher(arg);
+            checkArgument(m.find(), "argument does not match pattern: %s", arg);
+            int width = Integer.parseInt(m.group(1));
+            int height = Integer.parseInt(m.group(2));
+            int depth = Integer.parseInt(m.group(3));
+            return new ScreenSpace(width, height, depth);
+        }
+
+        @Override
+        public String toString() {
+            return String.format("ScreenSpace{%dx%dx%d}", width, height, depth);
+        }
+    }
+
+    private static String describe(ImageInfo ii) {
+        return MoreObjects.toStringHelper(ii)
+                .add("mimeType", ii.getMimeType())
+                .add("width", ii.getWidth())
+                .add("height", ii.getHeight())
+                .add("format", ii.getFormat())
+                .add("bpp", ii.getBitsPerPixel())
+                .toString();
+    }
+    private void checkScreenshot(XvfbManager.Screenshot screenshot, boolean allBlackExpected, XvfbConfig config) throws IOException {
+        File pnmFile = File.createTempFile("screenshot", ".pnm", tmp.getRoot());
+        screenshot.convertToPnmFile(pnmFile);
+        ImageInfo imageInfo = ImageInfos.read(Files.asByteSource(pnmFile));
+        System.out.format("%s%n", describe(imageInfo));
         BufferedImage image = ImageIO.read(pnmFile);
         checkState(image != null, "image unreadable: %s", pnmFile);
+        ScreenSpace expectedScreen = ScreenSpace.parse(config.geometry);
+        System.out.format("expecting %s%n", expectedScreen);
+        assertEquals("width", expectedScreen.width, image.getWidth());
+        assertEquals("height", expectedScreen.height, image.getHeight());
         Spectrum spectrum = Rainbow4J.readSpectrum(image);
         List<ColorDistribution> colorDistributions = spectrum.getColorDistribution(1);
         System.out.format("%d color distribution elements%n", colorDistributions.size());
@@ -139,11 +207,12 @@ public class XvfbManagerTest {
         checkState(blackDist != null, "not enough black in image to evaluate blackness; must have at least 1% black");
         System.out.format("color distribution: %s %s%n", blackDist.getColor(), blackDist.getPercentage());
         checkState(blackDist.getColor().equals(Color.black), "only element in distribution list is not black: %s", blackDist.getColor());
-        if (expected) {
+        if (allBlackExpected) {
             assertEquals("percentage of black", 100d, blackDist.getPercentage(), 1e-3);
         } else {
             assertTrue("percentage of black", blackDist.getPercentage() < 100);
         }
+
     }
 
     private static Predicate<ColorDistribution> forColor(final Color color) {
@@ -166,5 +235,16 @@ public class XvfbManagerTest {
             }
         }
         checkState(readerlessFormats.isEmpty(), "empty readers list for %s", readerlessFormats);
+    }
+
+    private static boolean isImageMagickInstalled() {
+        String[] progs = {"mogrify", "convert", "identify"};
+        Whicher whicher = Whicher.gnu();
+        for (String prog : progs) {
+            if (!whicher.which(prog).isPresent()) {
+                return false;
+            }
+        }
+        return true;
     }
 }

@@ -1,0 +1,110 @@
+
+xwininfo: Window id: 0xc2 (the root window) (has no name)
+
+  Root window id: 0xc2 (the root window) (has no name)
+  Parent window id: 0x0 (none)
+     60 children:
+     0xe001a7 (has no name): ()  755x939+305+19  +305+19
+        1 child:
+        0x1e00006 "charles@eastworld: ~": ("gnome-terminal-server" "Gnome-terminal")  735x884+10+45  +315+64
+           1 child:
+           0x1e00007 (has no name): ()  1x1+-1+-1  +314+63
+     0x1c01ff1 (has no name): ()  80x22+1050+1200  +1050+1200
+     0x1c01d2c "win37": ("sun-awt-X11-XWindowPeer" "jetbrains-idea")  80x22+1539+135  +1539+135
+     0x14000b9 (has no name): ()  189x29+558+429  +558+429
+        1 child:
+        0x1600291 (has no name): ()  189x29+0+0  +558+429
+     0x1c00473 "win2": ("sun-awt-X11-XWindowPeer" "jetbrains-idea")  557x57+1780+453  +1780+453
+     0x1c00460 "win1": ("sun-awt-X11-XWindowPeer" "jetbrains-idea")  557x57+1684+381  +1684+381
+     0x1c002ad "win0": ("sun-awt-X11-XWindowPeer" "jetbrains-idea")  341x576+2361+125  +2361+125
+     0x200012 (has no name): ()  1x1+0+0  +0+0
+     0x1c000c0 (has no name): ()  1x1+0+0  +0+0
+     0xe00f54 (has no name): ()  1920x1200+1050+0  +1050+0
+        1 child:
+        0x1c00041 "xvfb-manager-parent - [/home/mycode/xvfb-manager-java] - [xvfb-manager] - /home/mycode/xvfb-manager-java/xvfb-manager/src/main/java/com/github/charles10004/xvfbmanager/DefaultXvfbController.java - IntelliJ IDEA 2016.2.5": ("sun-awt-X11-XFramePeer" "jetbrains-idea")  1920x1163+0+37  +1050+37
+           2 children:
+           0x1c00047 "FocusProxy": ("Focus-Proxy-Window" "FocusProxy")  1x1+-1+-1  +1049+36
+           0x1c00044 "Content window": ("sun-awt-X11-XContentWindow" "jetbrains-idea")  1920x1200+0+-37  +1050+0
+     0x14000b4 "Transient (Java Platform SE 8 ) - Google Chrome": ("google-chrome" "Google-chrome")  1050x1087+0+199  +0+199
+        1 child:
+        0x1600245 (has no name): ()  1050x1087+0+0  +0+199
+     0x1c00008 "jetbrains-idea": ("jetbrains-idea" "jetbrains-idea")  1x1+1+1  +1+1
+     0x1c00007 " ": ("sun-awt-X11-XFramePeer" "jetbrains-idea")  1x1+0+0  +0+0
+        2 children:
+        0x1c0001f "FocusProxy": ("Focus-Proxy-Window" "FocusProxy")  1x1+-1+-1  +-1+-1
+        0x1c0001c "Content window": ("sun-awt-X11-XContentWindow" "jetbrains-idea")  10x30+-5+-25  +-5+-25
+     0x2000034 (has no name): ()  1x1+-1+-1  +-1+-1
+     0x200002f "java": ("java" "Java")  14x14+0+0  +0+0
+        1 child:
+        0x2000030 (has no name): ()  1x1+-1+-1  +-1+-1
+     0x200002c "java": ("java" "Java")  200x200+0+0  +0+0
+        1 child:
+        0x200002d (has no name): ()  1x1+-1+-1  +-1+-1
+     0x200001f "java": ("java" "Java")  200x200+0+0  +0+0
+        1 child:
+        0x2000020 (has no name): ()  1x1+-1+-1  +-1+-1
+     0x2000003 "java": ("java" "Java")  200x200+0+0  +0+0
+        1 child:
+        0x2000004 (has no name): ()  1x1+-1+-1  +-1+-1
+     0x2000001 "java": ("java" "Java")  10x10+10+10  +10+10
+        1 child:
+        0x2000002 (has no name): ()  1x1+-1+-1  +9+9
+     0x200010 (has no name): ()  1x1+0+0  +0+0
+     0x20000e (has no name): ()  1x1+0+0  +0+0
+     0x14000ad (has no name): ()  164x29+145+718  +145+718
+        1 child:
+        0x1600173 (has no name): ()  164x29+0+0  +145+718
+     0x1400079 "GenericTree/src/main/java/net/vivin at master · vivin/GenericTree - Google Chrome": ("google-chrome" "Google-chrome")  1050x1087+5+289  +5+289
+        1 child:
+        0x160012c (has no name): ()  1050x1087+0+0  +5+289
+     0x20000c (has no name): ()  1x1+0+0  +0+0
+     0x20000a (has no name): ()  1x1+0+0  +0+0
+     0x200008 (has no name): ()  1x1+0+0  +0+0
+     0x14000a7 (has no name): ()  93x29+264+663  +264+663
+        1 child:
+        0x160014a (has no name): ()  93x29+0+0  +264+663
+     0x1400002 "Build failed: common-helper 1.0.81 - cbacon@example.com - Example, LLC Mail - Google Chrome": ("google-chrome" "Google-chrome")  1050x1087+0+56  +0+56
+        1 child:
+        0x160000e (has no name): ()  1050x1087+0+0  +0+56
+     0x1e0000c (has no name): ()  1x1+-1+-1  +-1+-1
+     0x1e00002 "Terminal": ()  10x10+-100+-100  +-100+-100
+     0x1e00001 "Terminal": ("gnome-terminal-server" "Gnome-terminal-server")  10x10+10+10  +10+10
+     0x120005d "google-chrome-stable": ("google-chrome-stable" "Google-chrome-stable")  200x200+0+0  +0+0
+        1 child:
+        0x120005e (has no name): ()  1x1+-1+-1  +-1+-1
+     0x1200028 (has no name): ()  1x1+-1+-1  +-1+-1
+     0x1a00002 "update-notifier": ()  10x10+-100+-100  +-100+-100
+     0x1a00001 "update-notifier": ("update-notifier" "Update-notifier")  10x10+10+10  +10+10
+     0x1400047 "Chromium clipboard": ()  10x10+-100+-100  +-100+-100
+     0x1600005 (has no name): ()  1x1+0+0  +0+0
+     0x1800001 (has no name): ()  1x1+0+0  +0+0
+     0x1400001 (has no name): ()  1x1+0+0  +0+0
+     0x1200003 "google-chrome-stable": ("google-chrome-stable" "Google-chrome-stable")  200x200+0+0  +0+0
+        1 child:
+        0x1200004 (has no name): ()  1x1+-1+-1  +-1+-1
+     0x1200001 "google-chrome-stable": ("google-chrome-stable" "Google-chrome-stable")  10x10+10+10  +10+10
+        1 child:
+        0x1200002 (has no name): ()  1x1+-1+-1  +9+9
+     0xe0002a (has no name): ()  1x1+-1+-1  +-1+-1
+     0x1000001 "gnome-software": ("gnome-software" "Gnome-software")  10x10+10+10  +10+10
+     0xe00014 (has no name): ()  1x1+-1+-1  +-1+-1
+     0xe00011 "gnome-shell": ()  10x10+-100+-100  +-100+-100
+     0xe0000f (has no name): ()  1x1+-100+-100  +-100+-100
+     0xe0000b "gnome-shell": ("gnome-shell" "Gnome-shell")  1x1+-200+-200  +-200+-200
+        1 child:
+        0xe0000c (has no name): ()  1x1+-1+-1  +-201+-201
+     0xe00009 (has no name): ()  1x1+-100+-100  +-100+-100
+     0xe00004 (has no name): ()  1x1+-100+-100  +-100+-100
+     0xe00003 (has no name): ()  1x1+-100+-100  +-100+-100
+     0xe00002 "GNOME Shell": ()  1x1+-100+-100  +-100+-100
+     0xe00001 "gnome-shell": ("gnome-shell" "Gnome-shell")  10x10+10+10  +10+10
+     0xc00007 (has no name): ()  1x1+-100+-100  +-100+-100
+     0x800003 (has no name): ()  10x10+0+0  +0+0
+     0x800002 (has no name): ()  10x10+0+0  +0+0
+     0x800001 "gnome-settings-daemon": ("gnome-settings-daemon" "Gnome-settings-daemon")  10x10+10+10  +10+10
+     0x200003 "ibus-xim": ()  1x1+0+0  +0+0
+        1 child:
+        0x200004 (has no name): ()  1x1+-1+-1  +-1+-1
+     0x200001 "ibus-x11": ("ibus-x11" "Ibus-x11")  10x10+10+10  +10+10
+     0x400001 "ibus-ui-gtk3": ("ibus-ui-gtk3" "Ibus-ui-gtk3")  10x10+10+10  +10+10
+     0xe00015 "mutter guard window": ()  2970x1680+0+0  +0+0

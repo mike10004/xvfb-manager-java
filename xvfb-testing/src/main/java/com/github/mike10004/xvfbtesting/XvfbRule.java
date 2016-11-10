@@ -5,50 +5,64 @@ package com.github.mike10004.xvfbtesting;
 
 import com.github.mike10004.xvfbmanager.XvfbController;
 import com.github.mike10004.xvfbmanager.XvfbManager;
+import com.novetta.ibg.common.sys.Platforms;
 import org.junit.rules.ExternalResource;
 import org.junit.rules.TemporaryFolder;
 
-import java.io.File;
+import javax.annotation.Nullable;
 import java.io.IOException;
 
-import static com.google.common.base.Preconditions.*;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 public class XvfbRule extends ExternalResource {
 
     private final TemporaryFolder temporaryFolder;
-    private final int displayNumber;
-    private final XvfbManager xvfbManager;
+    private final @Nullable Integer initialDisplayNumber;
     private transient XvfbController xvfbController;
     private final boolean disabled;
 
-    public XvfbRule(int displayNum) {
-        this(displayNum, false);
+    public XvfbRule() {
+        this(false);
     }
 
-    public XvfbRule(int displayNum, boolean disabled) {
-        this(createDefaultXvfbManager(), displayNum, disabled);
+    public XvfbRule(boolean disabled) {
+        this(null, disabled, null);
     }
 
-    public XvfbRule(XvfbManager xvfbManager, int displayNumber) {
-        this(xvfbManager, displayNumber, false);
+    public XvfbRule(int displayNumber) {
+        this(displayNumber, false);
     }
 
-    public XvfbRule(XvfbManager xvfbManager, int displayNumber, boolean disabled) {
+    public XvfbRule(int displayNumber, boolean disabled) {
+        this(displayNumber, disabled, (Void) null);
+    }
+
+    private XvfbRule(@Nullable Integer displayNumber, boolean disabled, @Nullable Void unused) {
         temporaryFolder = new TemporaryFolder();
-        this.displayNumber = checkDisplayNumber(displayNumber);
-        this.xvfbManager = checkNotNull(xvfbManager);
+        initialDisplayNumber = displayNumber;
+        if (initialDisplayNumber != null) {
+            checkDisplayNumber(initialDisplayNumber);
+        }
         this.disabled = disabled;
+        checkArgument(disabled || !Platforms.getPlatform().isWindows(), "rule must be disabled on Windows platforms");
     }
 
-    static XvfbManager createDefaultXvfbManager() {
+    protected XvfbManager createXvfbManager(TemporaryFolder temporaryFolder) {
+        return createDefaultXvfbManager(temporaryFolder);
+    }
+
+    static XvfbManager createDefaultXvfbManager(TemporaryFolder temporaryFolder) {
         try {
-            return new XvfbManager();
+            return new XvfbManager(temporaryFolder.getRoot().toPath());
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
     }
 
-    protected static int checkDisplayNumber(int displayNum) {
+    protected static int checkDisplayNumber(Integer displayNum) {
+        checkNotNull(displayNum, "displayNum must be non-null");
         checkArgument(displayNum >= 0, "displayNum >= 0 is required");
         return displayNum;
     }
@@ -62,8 +76,12 @@ public class XvfbRule extends ExternalResource {
         checkState(xvfbController == null, "xvfbController already created");
         if (!disabled) {
             temporaryFolder.create();
-            File framebufferDir = temporaryFolder.getRoot();
-            xvfbController = xvfbManager.start(displayNumber, framebufferDir);
+            XvfbManager xvfbManager = createXvfbManager(temporaryFolder);
+            if (initialDisplayNumber != null) {
+                xvfbController = xvfbManager.start(initialDisplayNumber);
+            } else {
+                xvfbController = xvfbManager.start();
+            }
         }
     }
 
@@ -91,11 +109,4 @@ public class XvfbRule extends ExternalResource {
         return xvfbController_;
     }
 
-    protected static String toDisplayValue(int displayNumber) {
-        return String.format(":%d", checkDisplayNumber(displayNumber));
-    }
-
-    public String getDisplay() {
-        return toDisplayValue(displayNumber);
-    }
 }
