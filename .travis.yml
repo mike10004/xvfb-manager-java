@@ -6,4 +6,5 @@ addons:
     packages:
     - xvfb
     - imagemagick
+    - xdotool
 script: mvn verify -B
