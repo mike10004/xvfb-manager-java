@@ -137,7 +137,7 @@ public class DefaultXvfbController implements XvfbController {
         public Builder(String display) {
             this.display = checkNotNull(display);
             checkArgument(!display.isEmpty(), "display variable value must be nonempty");
-            this.sleeper = Sleeper.DEFAULT;
+            this.sleeper = Sleeper.DefaultSleeper.getInstance();
             this.screenshooter = new XwdScreenshooter(display, FileUtils.getTempDirectory());
         }
 
@@ -174,7 +174,7 @@ public class DefaultXvfbController implements XvfbController {
         private final Predicate<XWindow> evaluator;
 
         public XWindowPoller(String display, Predicate<XWindow> evaluator) {
-            super(Sleeper.DEFAULT);
+            super();
             this.display = checkNotNull(display);
             this.evaluator = checkNotNull(evaluator);
         }

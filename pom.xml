@@ -5,7 +5,7 @@
     <artifactId>xvfb-manager-parent</artifactId>
     <version>0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>xvfb-manager-java</name>
+    <name>xvfb-manager-parent</name>
     <modules>
         <module>xvfb-unittest-help</module>
         <module>xvfb-manager</module>

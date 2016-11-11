@@ -5,6 +5,7 @@ package com.github.mike10004.xvfbmanager;
 
 import com.github.mike10004.xvfbmanager.Poller.FinishReason;
 import com.github.mike10004.xvfbmanager.Poller.PollOutcome;
+import com.github.mike10004.xvfbmanager.Poller.SimplePoller;
 import com.google.common.base.Suppliers;
 import org.junit.Test;
 
@@ -36,17 +37,54 @@ public class PollerTest {
     }
 
     @Test
-    public void poll_abortFromCheck() throws Exception {
+    public void poll_abortFromCheck_0() throws Exception {
+        poll_abortFromCheck(0);
+    }
+
+    @Test
+    public void poll_abortFromCheck_1() throws Exception {
+        poll_abortFromCheck(1);
+    }
+
+    @Test
+    public void poll_abortFromCheck_2() throws Exception {
+        poll_abortFromCheck(2);
+    }
+
+    public void poll_abortFromCheck(final int attempts) throws Exception {
         TestSleeper sleeper = new TestSleeper();
         PollOutcome<?> outcome = new Poller<Void>(sleeper) {
             @Override
             protected PollAnswer<Void> check(int pollAttemptsSoFar) {
-                return abortPolling();
+                return pollAttemptsSoFar >= attempts ? abortPolling() : continuePolling();
             }
         }.poll(1000, Integer.MAX_VALUE); // poll forever
         assertEquals("reason", FinishReason.ABORTED, outcome.reason);
-        assertEquals("duration", 1000, sleeper.getDuration());
-        assertEquals("sleep count", 1, sleeper.getCount());
+        assertEquals("duration", attempts * 1000, sleeper.getDuration());
+        assertEquals("sleep count", attempts, sleeper.getCount());
+    }
+
+    @Test
+    public void poll_timeoutOverridesAbort_0() throws Exception {
+        poll_timeoutOverridesAbort(0);
+    }
+
+    @Test
+    public void poll_timeoutOverridesAbort_1() throws Exception {
+        poll_timeoutOverridesAbort(1);
+    }
+
+    public void poll_timeoutOverridesAbort(final int attempts) throws Exception {
+        TestSleeper sleeper = new TestSleeper();
+        PollOutcome<?> outcome = new Poller<Void>(sleeper) {
+            @Override
+            protected PollAnswer<Void> check(int pollAttemptsSoFar) {
+                return pollAttemptsSoFar >= attempts ? abortPolling() : continuePolling();
+            }
+        }.poll(1000, attempts); // poll forever
+        assertEquals("reason", FinishReason.TIMEOUT, outcome.reason);
+        assertEquals("duration", attempts * 1000, sleeper.getDuration());
+        assertEquals("sleep count", attempts, sleeper.getCount());
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -55,18 +93,27 @@ public class PollerTest {
     }
 
     @Test
-    public void testDoNotSleepIfAboutToTimeOut() throws Exception {
+    public void testDoNotSleepIfAboutToTimeOut_1() throws Exception {
+        testDoNotSleepIfAboutToTimeOut(1000, 1, FinishReason.TIMEOUT, 1000, 1);
+    }
+
+    @Test
+    public void testDoNotSleepIfAboutToTimeOut_2() throws Exception {
+        testDoNotSleepIfAboutToTimeOut(1000, 2, FinishReason.TIMEOUT, 2000, 2);
+    }
+
+    public void testDoNotSleepIfAboutToTimeOut(long intervalMs, int maxPolls, FinishReason stopReason, long expectedDuration, int expectedSleeps) throws Exception {
         TestSleeper sleeper = new TestSleeper();
-        Poller.checking(sleeper, Suppliers.ofInstance(true)).poll(1000, 1);
-        assertEquals("duration", 1000, sleeper.getDuration());
-        assertEquals("sleep count", 1, sleeper.getCount());
+        PollOutcome<Void> outcome = new SimplePoller(sleeper, Suppliers.ofInstance(false)).poll(intervalMs, maxPolls);
+        assertEquals("stopReason", stopReason, outcome.reason);
+        assertEquals("duration", expectedDuration, sleeper.getDuration());
+        assertEquals("sleep count", expectedSleeps, sleeper.getCount());
     }
 
     private void testPoller(int returnTrueAfterNAttempts, int maxPollAttempts, long interval, FinishReason expectedFinishReason, long expectedDuration) throws InterruptedException {
         TestSleeper sleeper = new TestSleeper();
         TestPoller poller = new TestPoller(sleeper, returnTrueAfterNAttempts);
         PollOutcome<?> evaluation = poller.poll(interval, maxPollAttempts);
-        System.out.format("poll result: %s%n", evaluation);
         assertEquals("evaluation.result", expectedFinishReason, evaluation.reason);
         assertEquals("duration", expectedDuration, sleeper.getDuration());
     }

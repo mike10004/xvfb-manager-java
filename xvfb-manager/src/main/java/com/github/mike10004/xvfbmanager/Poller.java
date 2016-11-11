@@ -3,6 +3,7 @@
  */
 package com.github.mike10004.xvfbmanager;
 
+import com.github.mike10004.xvfbmanager.Sleeper.DefaultSleeper;
 import com.google.common.base.Supplier;
 
 import javax.annotation.Nullable;
@@ -16,19 +17,11 @@ public abstract class Poller<T> {
     private final Sleeper sleeper;
 
     public Poller() {
-        this(Sleeper.DEFAULT);
+        this(DefaultSleeper.getInstance());
     }
 
     protected Poller(Sleeper sleeper) {
         this.sleeper = checkNotNull(sleeper);
-    }
-
-    static class DefaultSleeper implements Sleeper {
-
-        @Override
-        public void sleep(long millis) throws InterruptedException {
-            Thread.sleep(millis);
-        }
     }
 
     public PollOutcome<T> poll(long intervalMs, int maxNumPolls) throws InterruptedException {
@@ -167,24 +160,38 @@ public abstract class Poller<T> {
 
     /**
      * Creates a simple poller that evaluates a condition on each poll.
-     * @param condition the condition to evaluate
+     * @param condition the condition to evaluate; poll will be resolved if it
+     *                  returns true, and if it returns false, the poller will
+     *                  keep polling
      * @return the poller
      */
     public static Poller<Void> checking(final Supplier<Boolean> condition) {
-        return checking(Sleeper.DEFAULT, condition);
+        return new SimplePoller(condition);
     }
 
-    protected static Poller<Void> checking(Sleeper sleeper, final Supplier<Boolean> condition) {
-        return new Poller<Void>() {
-            @Override
-            protected PollAnswer<Void> check(int pollAttemptsSoFar) {
-                boolean state = condition.get();
-                if (state) {
-                    return resolve(null);
-                } else {
-                    return continuePolling();
-                }
+    protected static class SimplePoller extends Poller<Void> {
+
+        private final Supplier<Boolean> condition;
+
+        public SimplePoller(Sleeper sleeper, Supplier<Boolean> condition) {
+            super(sleeper);
+            this.condition = checkNotNull(condition);
+        }
+
+        public SimplePoller(Supplier<Boolean> condition) {
+            super();
+            this.condition = checkNotNull(condition);
+        }
+
+        @Override
+        protected PollAnswer<Void> check(int pollAttemptsSoFar) {
+            boolean state = condition.get();
+            if (state) {
+                return resolve(null);
+            } else {
+                return continuePolling();
             }
-        };
+        }
     }
+
 }

@@ -112,7 +112,7 @@ public class XvfbManager {
     }
 
     protected Sleeper createSleeper() {
-        return Sleeper.DEFAULT;
+        return Sleeper.DefaultSleeper.getInstance();
     }
 
     protected DisplayReadinessChecker createDisplayReadinessChecker(String display, File framebufferDir) {
@@ -277,7 +277,7 @@ public class XvfbManager {
     private static final int AUTO_DISPLAY_POLLS_MAX = 20;
 
     protected int pollForDisplayNumber(final CharSource cs) {
-        Poller<Integer> poller = new Poller<Integer>(Sleeper.DEFAULT) {
+        Poller<Integer> poller = new Poller<Integer>() {
             @Override
             protected PollAnswer<Integer> check(int pollAttemptsSoFar) {
                 @Nullable String lastLine = null;
