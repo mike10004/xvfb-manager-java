@@ -471,8 +471,10 @@ public class XvfbManager {
             try {
                 FileUtils.deleteDirectory(directory);
             } catch (IOException e) {
-                LoggerFactory.getLogger(DirectoryDeletingCallback.class)
-                        .info("failed to delete directory {}: {}", directory, e);
+                if (directory.exists()) {
+                    LoggerFactory.getLogger(DirectoryDeletingCallback.class)
+                            .info("failed to delete directory {}: {}", directory, e);
+                }
             }
         }
     }
