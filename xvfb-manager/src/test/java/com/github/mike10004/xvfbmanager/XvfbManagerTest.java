@@ -70,21 +70,8 @@ public class XvfbManagerTest {
     }
     @org.junit.Test
     public void start_autoDisplay_trueColor() throws Exception {
-        Assume.assumeTrue("xvfb version not high enough to test auto-display support", checkAutoDisplaySupport());
+        Assume.assumeTrue("xvfb version not high enough to test auto-display support", PackageManager.checkAutoDisplaySupport());
         testWithConfigAndDisplay(new XvfbConfig("640x480x24"), null);
-    }
-
-    private static boolean checkAutoDisplaySupport() throws IOException {
-        String version = PackageManager.queryPackageVersion("xvfb");
-        Matcher m = Pattern.compile("\\d+:(\\d+)\\.(\\d+)\\b.*").matcher(version);
-        if (m.find()) {
-            String majorStr = m.group(1);
-            String minorStr = m.group(2);
-            int major = Integer.parseInt(majorStr), minor = Integer.parseInt(minorStr);
-            System.out.format("xvfb version \"%s\" parsed to (major, minor) = (%d, %d)%n", version, major, minor);
-            return major > 1 || (major >= 1 && minor >= 13);
-        }
-        throw new IllegalStateException("unexpected xvfb version string: " + version);
     }
 
     @org.junit.Test
