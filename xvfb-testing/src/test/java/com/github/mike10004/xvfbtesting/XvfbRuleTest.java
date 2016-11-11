@@ -6,6 +6,7 @@ package com.github.mike10004.xvfbtesting;
 import com.github.mike10004.nativehelper.Program;
 import com.github.mike10004.nativehelper.ProgramResult;
 import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
+import com.github.mike10004.xvfbunittesthelp.PackageManager;
 import com.github.mike10004.xvfbmanager.TreeNode;
 import com.github.mike10004.xvfbmanager.XvfbController;
 import com.github.mike10004.xvfbmanager.XvfbController.XWindow;
@@ -33,10 +34,7 @@ import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class XvfbRuleTest {
 
@@ -44,12 +42,11 @@ public class XvfbRuleTest {
     private static final AtomicInteger displayNumbers = new AtomicInteger(FIRST_DISPLAY_NUMBER);
 
     @BeforeClass
-    public static void checkPrerequsities() {
-        for (String packageName : new String[]{"x11-utils", "xdotool"}) {
-            boolean installed = queryPackageInstalled(packageName);
+    public static void checkPrerequisities() {
+        for (String packageName : new String[]{"xvfb", "x11-utils", "xdotool"}) {
+            boolean installed = PackageManager.queryPackageInstalled(packageName);
             Assume.assumeTrue(packageName + " must be installed for these tests to be executed", installed);
         }
-
     }
 
     private static abstract class RuleUser {
@@ -199,26 +196,6 @@ public class XvfbRuleTest {
             } else {
                 System.out.format("%s: %s%n", name, t);
             }
-        }
-    }
-
-    private static boolean queryPackageInstalled(String packageName) {
-        try {
-            ProgramWithOutputStringsResult result = Program.running("dpkg-query")
-                    .args("-l", packageName)
-                    .outputToStrings()
-                    .execute();
-            System.out.format("dpkg-query: %d%n", result.getExitCode());
-            if (result.getExitCode() == 0) {
-                System.out.println(result.getStdoutString());
-            } else {
-                System.out.println(result.getStderrString());
-            }
-            return result.getExitCode() == 0;
-        } catch (Exception e) {
-            System.err.println("failed to query package status");
-            e.printStackTrace(System.err);
-            return false;
         }
     }
 

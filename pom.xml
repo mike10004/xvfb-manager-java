@@ -7,9 +7,13 @@
     <packaging>pom</packaging>
     <name>xvfb-manager-java</name>
     <modules>
+        <module>xvfb-unittest-help</module>
         <module>xvfb-manager</module>
         <module>xvfb-testing</module>
     </modules>
+    <properties>
+        <common-helper.version>5.1.0</common-helper.version>
+    </properties>
     <build>
         <pluginManagement>
             <plugins>
@@ -30,6 +34,16 @@
     </build>
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>com.github.mike10004</groupId>
+                <artifactId>native-helper</artifactId>
+                <version>${common-helper.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.mike10004</groupId>
+                <artifactId>imnetio-helper</artifactId>
+                <version>${common-helper.version}</version>
+            </dependency>
             <dependency>
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>

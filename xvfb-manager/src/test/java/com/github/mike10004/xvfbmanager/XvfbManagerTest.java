@@ -10,6 +10,7 @@ import com.github.mike10004.nativehelper.Program;
 import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
 import com.github.mike10004.xvfbmanager.XvfbController.XWindow;
 import com.github.mike10004.xvfbmanager.XvfbManager.Screenshot;
+import com.github.mike10004.xvfbunittesthelp.PackageManager;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
@@ -67,6 +68,13 @@ public class XvfbManagerTest {
         assertEquals("display", ":123", XvfbManager.toDisplayValue(123));
     }
 
+    @org.junit.BeforeClass
+    public static void checkPrerequisities() {
+        for (String packageName : new String[]{"xvfb", "x11-utils", "xdotool"}) {
+            boolean installed = PackageManager.queryPackageInstalled(packageName);
+            Assume.assumeTrue(packageName + " must be installed for these tests to be executed", installed);
+        }
+    }
     @org.junit.Test
     public void start_autoDisplay_trueColor() throws Exception {
         Assume.assumeTrue("xvfb version not high enough to test auto-display support", checkAutoDisplaySupport());
@@ -74,7 +82,7 @@ public class XvfbManagerTest {
     }
 
     private static boolean checkAutoDisplaySupport() throws IOException {
-        String version = queryPackageVersion("xvfb");
+        String version = PackageManager.queryPackageVersion("xvfb");
         Matcher m = Pattern.compile("\\d+:(\\d+)\\.(\\d+)\\b.*").matcher(version);
         if (m.find()) {
             String majorStr = m.group(1);
@@ -93,7 +101,7 @@ public class XvfbManagerTest {
 
     private void testWithConfigAndDisplay(XvfbConfig config, @Nullable Integer displayNumber) throws Exception {
         Assume.assumeFalse("supported platforms are Linux and MacOS", Platforms.getPlatform().isWindows());
-        Assume.assumeTrue("imagemagick must be installed", isImageMagickInstalled());
+        Assume.assumeTrue("imagemagick must be installed", PackageManager.checkImageMagickInstalled());
         XvfbManager instance = new XvfbManager(config) {
             @Override
             protected DisplayReadinessChecker createDisplayReadinessChecker(String display, File framebufferDir) {
@@ -231,44 +239,6 @@ public class XvfbManagerTest {
             }
         }
         checkState(readerlessFormats.isEmpty(), "empty readers list for %s", readerlessFormats);
-    }
-
-    private static boolean isImageMagickInstalled() {
-        String[] progs = {"mogrify", "convert", "identify"};
-        Whicher whicher = Whicher.gnu();
-        for (String prog : progs) {
-            if (!whicher.which(prog).isPresent()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static String queryPackageVersion(String packageName) throws IOException {
-        ProgramWithOutputStringsResult result = Program.running("dpkg-query")
-                .args("--status", packageName)
-                .outputToStrings()
-                .execute();
-        String stdout = result.getStdoutString();
-        String version = CharSource.wrap(stdout).readLines(new LineProcessor<String>(){
-
-            private String version;
-
-            @Override
-            public boolean processLine(String line) throws IOException {
-                if (line.startsWith("Version: ")) {
-                    version = StringUtils.removeStart(line, "Version: ").trim();
-                    return false;
-                }
-                return true;
-            }
-
-            @Override
-            public String getResult() {
-                return version;
-            }
-        });
-        return version;
     }
 
 }
