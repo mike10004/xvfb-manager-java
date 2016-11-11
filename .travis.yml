@@ -1,3 +1,6 @@
+dist: trusty
+sudo: false
+group: beta
 language: java
 jdk:
   - oraclejdk8
