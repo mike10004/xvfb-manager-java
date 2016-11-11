@@ -10,3 +10,7 @@ buildNumber.properties
 
 .idea/
 *.iml
+
+hs_err*.log
+replay*.log
+
