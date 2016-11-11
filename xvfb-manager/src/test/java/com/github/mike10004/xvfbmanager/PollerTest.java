@@ -5,6 +5,7 @@ package com.github.mike10004.xvfbmanager;
 
 import com.github.mike10004.xvfbmanager.Poller.FinishReason;
 import com.github.mike10004.xvfbmanager.Poller.PollOutcome;
+import com.google.common.base.Suppliers;
 import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -21,12 +22,12 @@ public class PollerTest {
 
     @Test
     public void poll_trueAfterZero() throws Exception {
-        testPoller(0, 100, 1000, FinishReason.STOPPED, 0);
+        testPoller(0, 100, 1000, FinishReason.RESOLVED, 0);
     }
 
     @Test
     public void poll_trueAfterOne() throws Exception {
-        testPoller(1, 100, 1000, FinishReason.STOPPED, 1000);
+        testPoller(1, 100, 1000, FinishReason.RESOLVED, 1000);
     }
 
     @Test
@@ -34,9 +35,31 @@ public class PollerTest {
         testPoller(5, 4, 1000, FinishReason.TIMEOUT, 4000);
     }
 
+    @Test
+    public void poll_abortFromCheck() throws Exception {
+        TestSleeper sleeper = new TestSleeper();
+        PollOutcome<?> outcome = new Poller<Void>(sleeper) {
+            @Override
+            protected PollAnswer<Void> check(int pollAttemptsSoFar) {
+                return abortPolling();
+            }
+        }.poll(1000, Integer.MAX_VALUE); // poll forever
+        assertEquals("reason", FinishReason.ABORTED, outcome.reason);
+        assertEquals("duration", 1000, sleeper.getDuration());
+        assertEquals("sleep count", 1, sleeper.getCount());
+    }
+
     @Test(expected = IllegalArgumentException.class)
     public void poll_badArgs() throws Exception {
         testPoller(5, 4, -1000, null, 0);
+    }
+
+    @Test
+    public void testDoNotSleepIfAboutToTimeOut() throws Exception {
+        TestSleeper sleeper = new TestSleeper();
+        Poller.checking(sleeper, Suppliers.ofInstance(true)).poll(1000, 1);
+        assertEquals("duration", 1000, sleeper.getDuration());
+        assertEquals("sleep count", 1, sleeper.getCount());
     }
 
     private void testPoller(int returnTrueAfterNAttempts, int maxPollAttempts, long interval, FinishReason expectedFinishReason, long expectedDuration) throws InterruptedException {
@@ -61,7 +84,7 @@ public class PollerTest {
         @Override
         protected PollAnswer<Long> check(int pollAttemptsSoFar) {
             return pollAttemptsSoFar >= returnTrueAfterNAttempts
-                    ? stopPolling(values.incrementAndGet())
+                    ? resolve(values.incrementAndGet())
                     : continuePolling(values.incrementAndGet());
         }
     }

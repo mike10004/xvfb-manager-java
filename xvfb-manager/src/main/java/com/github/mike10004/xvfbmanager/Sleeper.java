@@ -20,5 +20,6 @@ public interface Sleeper {
      * Default implementation of the sleeper interface.
      * Calls {@link Thread#sleep(long)}.
      */
-    Sleeper DEFAULT = new XvfbManager.DefaultSleeper();
+    Sleeper DEFAULT = new Poller.DefaultSleeper();
+
 }

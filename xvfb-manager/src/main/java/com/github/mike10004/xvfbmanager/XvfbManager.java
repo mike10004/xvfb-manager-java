@@ -290,7 +290,7 @@ public class XvfbManager {
                     lastLine = lastLine.trim();
                     if (lastLine.matches("\\d+")) {
                         int displayNumber = Integer.parseInt(lastLine);
-                        return stopPolling(displayNumber);
+                        return resolve(displayNumber);
                     } else {
                         log.debug("last line of xvfb output is not an integer: {}", StringUtils.abbreviate(lastLine, 128));
                     }
@@ -304,7 +304,7 @@ public class XvfbManager {
         } catch (InterruptedException e) {
             throw new XvfbException("interrupted while polling for display number", e);
         }
-        if (pollOutcome.reason == FinishReason.STOPPED) {
+        if (pollOutcome.reason == FinishReason.RESOLVED) {
             assert pollOutcome.content != null : "poll resolved but outcome content is null";
             return pollOutcome.content;
         } else {
@@ -439,14 +439,6 @@ public class XvfbManager {
                     StringEscapeUtils.escapeJava(stdout), StringEscapeUtils.escapeJava(stderr));
         }
 
-    }
-
-    static class DefaultSleeper implements Sleeper {
-
-        @Override
-        public void sleep(long millis) throws InterruptedException {
-            Thread.sleep(millis);
-        }
     }
 
     static class DirectoryDeletingCallback implements FutureCallback<ProgramResult> {

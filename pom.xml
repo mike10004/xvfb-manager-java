@@ -10,6 +10,8 @@
         <module>xvfb-unittest-help</module>
         <module>xvfb-manager</module>
         <module>xvfb-testing</module>
+        <module>xvfb-manager-example</module>
+        <module>xvfb-selenium</module>
     </modules>
     <properties>
         <common-helper.version>5.1.0</common-helper.version>

@@ -7,6 +7,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.IOException;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -14,7 +15,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Interface for a class that controls a virtual framebuffer process.
  */
-public interface XvfbController extends AutoCloseable {
+public interface XvfbController extends Closeable {
 
     /**
      * Waits using default values for the polling interval and maximum polls.

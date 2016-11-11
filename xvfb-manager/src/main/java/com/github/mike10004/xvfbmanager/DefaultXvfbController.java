@@ -91,16 +91,14 @@ public class DefaultXvfbController implements XvfbController {
         PollOutcome<Boolean> pollResult = new Poller<Boolean>(sleeper) {
             @Override
             protected PollAnswer<Boolean> check(int pollAttemptsSoFar) {
+                if (checkAbort()) {
+                    return abortPolling();
+                }
                 boolean ready = displayReadinessChecker.checkReadiness(display);
-                return ready ? stopPolling(true) : continuePolling(false);
-            }
-
-            @Override
-            protected boolean isAborted() {
-                return checkAbort();
+                return ready ? resolve(true) : continuePolling(false);
             }
         }.poll(pollIntervalMs, maxNumPolls);
-        boolean displayReady = (pollResult.reason == FinishReason.STOPPED) && pollResult.content != null && pollResult.content;
+        boolean displayReady = (pollResult.reason == FinishReason.RESOLVED) && pollResult.content != null && pollResult.content;
         if (!displayReady) {
             throw new XvfbException("display never became ready: " + pollResult);
         }
@@ -199,7 +197,7 @@ public class DefaultXvfbController implements XvfbController {
                                 return match == input.getLabel();
                             }
                         });
-                        return stopPolling(targetWindowNode);
+                        return resolve(targetWindowNode);
                     } else {
                         return continuePolling(root);
                     }
