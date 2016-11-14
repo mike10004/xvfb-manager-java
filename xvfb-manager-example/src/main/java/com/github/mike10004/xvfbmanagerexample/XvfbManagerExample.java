@@ -21,7 +21,9 @@ import org.openqa.selenium.OutputType;
 import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.firefox.FirefoxBinary;
 import org.openqa.selenium.firefox.FirefoxDriver;
+import org.openqa.selenium.firefox.FirefoxProfile;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -33,6 +35,8 @@ import java.net.URL;
 import static com.google.common.base.Preconditions.checkArgument;
 
 public class XvfbManagerExample {
+
+    public static final String ENV_FIREFOX_BIN = "FIREFOX_BIN";
 
     public static void main(String[] args) throws IOException {
         if (args.length < 0 || !browserMap.containsKey(args[0])) {
@@ -93,7 +97,13 @@ public class XvfbManagerExample {
             .put("firefox", Pair.of(org.openqa.selenium.firefox.MarionetteDriver.class, new Function<String, FirefoxDriver>(){
                 @Override
                 public FirefoxDriver apply(String display) {
-                    return WebDriverSupport.firefoxOnDisplay(display).create();
+                    String firefoxBin = System.getenv(ENV_FIREFOX_BIN);
+                    if (firefoxBin != null) {
+                        System.out.format("using firefox binary path from environment variable %s: %s%n", ENV_FIREFOX_BIN, firefoxBin);
+                        return WebDriverSupport.firefoxOnDisplay(display).create(new FirefoxBinary(new File(firefoxBin)), new FirefoxProfile());
+                    } else {
+                        return WebDriverSupport.firefoxOnDisplay(display).create();
+                    }
                 }
             }))
             .put("chrome", Pair.of(ChromeDriver.class, new Function<String, ChromeDriver>(){
