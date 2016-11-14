@@ -74,7 +74,7 @@ public class XvfbManagerExample {
     private static BufferedImage browse(String browserKey, URL url, String display) throws IOException {
         Pair<Class<? extends WebDriver>, Function<String, ? extends WebDriver>> driverStuff = browserMap.get(browserKey);
         checkArgument(driverStuff != null, "unsupported browser: %s", browserKey);
-        System.out.format("browsing %s with %s%n", url, driverStuff.getLeft());
+        System.out.format("browsing %s on display %s with %s%n", url, display, driverStuff.getLeft());
         Class<? extends WebDriver> webDriverClass = driverStuff.getLeft();
         WebDriverManager.getInstance(webDriverClass).setup();
         WebDriver webDriver = driverStuff.getRight().apply(display);
