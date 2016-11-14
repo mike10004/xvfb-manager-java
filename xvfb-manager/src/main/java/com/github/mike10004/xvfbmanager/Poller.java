@@ -24,7 +24,7 @@ import static com.google.common.base.Preconditions.checkState;
  * with the result, or {@link PollAction#ABORT abortion} meaning polling
  * must stop early without a resolution.
  *
- * @param <T>
+ * @param <T> type of content returned upon resolution
  */
 public abstract class Poller<T> {
 

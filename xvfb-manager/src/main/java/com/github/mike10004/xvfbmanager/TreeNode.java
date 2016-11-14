@@ -6,7 +6,7 @@ import com.google.common.collect.TreeTraverser;
 /**
  * Interface that represents a node in a tree data structure.
  * Nodes of this type are aware of their parents and children.
- * @param <T>
+ * @param <T> node label type
  */
 public interface TreeNode<T> extends Iterable<T> {
 

@@ -82,6 +82,7 @@ public class XvfbRule extends ExternalResource {
 
         /**
          * Sets the manager instance to be used in building a rule.
+         * @param xvfbManager the manager to build the rule with
          * @return this instance
          */
         public Builder manager(XvfbManager xvfbManager) {
@@ -123,6 +124,7 @@ public class XvfbRule extends ExternalResource {
          * Sets the display number of the rule instance being built.
          * Use {@link #autoDisplay()} to automatically select an unused
          * display number.
+         * @param displayNumber the display number
          * @return this instance
          */
         public Builder onDisplay(int displayNumber) {

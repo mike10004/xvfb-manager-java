@@ -131,8 +131,8 @@ public class DefaultXvfbController implements XvfbController {
         /**
          * Captures a screenshot.
          * @return the screenshot
-         * @throws IOException
-         * @throws XvfbException
+         * @throws IOException if capture encounters an I/O error
+         * @throws XvfbException if a virtual framebuffer error occurs
          */
         Screenshot capture() throws IOException, XvfbException;
         @SuppressWarnings("unused")

@@ -67,7 +67,7 @@ public class XvfbManager {
     /**
      * Constructs an instance of the class with a given configuration.
      * @param xvfbConfig the configuration
-     * @throws IOException
+     * @throws IOException if Xvfb executable cannot be resolved
      */
     public XvfbManager(XvfbConfig xvfbConfig) throws IOException {
         this(resolveXvfbExecutable(), xvfbConfig);
@@ -78,7 +78,6 @@ public class XvfbManager {
      * with the given configuration.
      * @param xvfbExecutable pathname of the {@code Xvfb} executable
      * @param xvfbConfig virtual framebuffer configuration
-     * @param scratchDir directory for scratch files
      */
     public XvfbManager(File xvfbExecutable, XvfbConfig xvfbConfig) {
         this.xvfbExecutable = checkNotNull(xvfbExecutable);
@@ -145,6 +144,7 @@ public class XvfbManager {
     /**
      * Starts Xvfb on the specified display number. A directory for temp files will be created and deleted
      * when the process is stopped.
+     * @param displayNumber the display number
      * @return the process controller
      * @throws IOException if the files and directories the process requires cannot be created or written to
      */
