@@ -9,9 +9,4 @@ addons:
     - imagemagick
     - xdotool
   firefox: "49.0"
-install: 
-- echo $JAVA_HOME
-- ls -l /usr/lib/jvm
-- readlink -f $(which java)
-- mvn compile test-compile --show-version --batch-mode
 script: mvn verify -B
