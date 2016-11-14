@@ -42,9 +42,9 @@ public class XvfbRuleTest {
     private static final AtomicInteger displayNumbers = new AtomicInteger(FIRST_DISPLAY_NUMBER);
 
     @BeforeClass
-    public static void checkPrerequisities() {
+    public static void checkPrerequisities() throws IOException {
         for (String packageName : new String[]{"xvfb", "x11-utils", "xdotool"}) {
-            boolean installed = PackageManager.queryPackageInstalled(packageName);
+            boolean installed = PackageManager.getInstance().queryPackageInstalled(packageName);
             Assume.assumeTrue(packageName + " must be installed for these tests to be executed", installed);
         }
     }

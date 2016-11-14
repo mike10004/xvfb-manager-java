@@ -10,8 +10,8 @@ public class XvfbManagerExampleTest {
 
     @BeforeClass
     public static void checkPrequisites() throws IOException {
-        Assume.assumeTrue(PackageManager.queryPackageInstalled("xvfb"));
-        Assume.assumeTrue("xvfb version not high enough to test auto-display support", PackageManager.checkAutoDisplaySupport());
+        Assume.assumeTrue("xvfb must be installed for these tests", PackageManager.getInstance().queryPackageInstalled("xvfb"));
+        Assume.assumeTrue("xvfb version not high enough to test auto-display support", PackageManager.getInstance().checkAutoDisplaySupport());
     }
 
     @org.junit.Test

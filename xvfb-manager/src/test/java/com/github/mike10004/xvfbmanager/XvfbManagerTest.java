@@ -62,15 +62,16 @@ public class XvfbManagerTest {
     }
 
     @org.junit.BeforeClass
-    public static void checkPrerequisities() {
+    public static void checkPrerequisities() throws IOException {
+        PackageManager packageManager = PackageManager.getInstance();
         for (String packageName : new String[]{"xvfb", "x11-utils", "xdotool"}) {
-            boolean installed = PackageManager.queryPackageInstalled(packageName);
+            boolean installed = packageManager.queryPackageInstalled(packageName);
             Assume.assumeTrue(packageName + " must be installed for these tests to be executed", installed);
         }
     }
     @org.junit.Test
     public void start_autoDisplay_trueColor() throws Exception {
-        Assume.assumeTrue("xvfb version not high enough to test auto-display support", PackageManager.checkAutoDisplaySupport());
+        Assume.assumeTrue("xvfb version not high enough to test auto-display support", PackageManager.getInstance().checkAutoDisplaySupport());
         testWithConfigAndDisplay(new XvfbConfig("640x480x24"), null);
     }
 
@@ -81,7 +82,7 @@ public class XvfbManagerTest {
 
     private void testWithConfigAndDisplay(XvfbConfig config, @Nullable Integer displayNumber) throws Exception {
         Assume.assumeFalse("supported platforms are Linux and MacOS", Platforms.getPlatform().isWindows());
-        Assume.assumeTrue("imagemagick must be installed", PackageManager.checkImageMagickInstalled());
+        Assume.assumeTrue("imagemagick must be installed", PackageManager.getInstance().checkImageMagickInstalled());
         XvfbManager instance = new XvfbManager(config) {
             @Override
             protected DisplayReadinessChecker createDisplayReadinessChecker(String display, File framebufferDir) {
