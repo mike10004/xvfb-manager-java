@@ -2,8 +2,6 @@ dist: trusty
 sudo: false
 group: beta
 language: java
-jdk:
-  - oraclejdk8
 addons:
   apt:
     packages:
@@ -11,9 +9,4 @@ addons:
     - imagemagick
     - xdotool
   firefox: "49.0"
-install: 
-- echo $JAVA_HOME
-- ls -l $(which java)
-- readlink -f $(which java)
-- mvn compile test-compile --show-version --batch-mode
 script: mvn verify -B
