@@ -40,13 +40,18 @@ public class XvfbManagerExample {
 
     public static void main(String[] args) throws IOException {
         if (args.length < 0 || !browserMap.containsKey(args[0])) {
-            System.err.format("argument must be one of {%s}%n", Joiner.on(", ").join(browserMap.keySet()));
+            System.err.format("first argument must be one of {%s}%n", Joiner.on(", ").join(browserMap.keySet()));
             System.exit(1);
         }
-        browseAndCaptureScreenshot(args[0]);
+        if (args.length < 1) {
+            System.err.println("second argument must be screenshot output pathname");
+            System.exit(1);
+        }
+        File screenshotFile = new File(args[1]);
+        browseAndCaptureScreenshot(args[0], screenshotFile);
     }
 
-    public static void browseAndCaptureScreenshot(String browserKey) throws IOException {
+    public static void browseAndCaptureScreenshot(String browserKey, File screenshotFile) throws IOException {
         ClientAndServer server = ClientAndServer.startClientAndServer(0);
         try {
             String host = "localhost", path = "/";
@@ -62,7 +67,6 @@ public class XvfbManagerExample {
                 screenshotImage = browse(browserKey, url, ctrl.getDisplay());
             }
             System.out.format("captured %dx%d screenshot%n", screenshotImage.getWidth(), screenshotImage.getHeight());
-            File screenshotFile = new File(System.getProperty("user.dir")).toPath().resolve("target").resolve("screenshot-" + System.currentTimeMillis() + ".png").toFile();
             ImageIO.write(screenshotImage, "png", screenshotFile);
         } finally {
             server.stop();

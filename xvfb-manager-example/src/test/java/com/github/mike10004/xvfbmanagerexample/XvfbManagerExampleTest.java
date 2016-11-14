@@ -4,10 +4,18 @@ import com.github.mike10004.xvfbunittesthelp.PackageManager;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 
 public class XvfbManagerExampleTest {
+
+    @Rule
+    public TemporaryFolder tmp = new TemporaryFolder();
 
     @BeforeClass
     public static void checkPrequisites() throws IOException {
@@ -52,7 +60,10 @@ public class XvfbManagerExampleTest {
     }
 
     private void runMainWithArgs(String browserKey) throws IOException {
-        XvfbManagerExample.browseAndCaptureScreenshot(browserKey);
+        File screenshotFile = tmp.newFile("screenshot.png");
+        XvfbManagerExample.browseAndCaptureScreenshot(browserKey, screenshotFile);
+        BufferedImage image = ImageIO.read(screenshotFile);
+        System.out.format("%dx%d screenshot saved to %s%n", image.getWidth(), image.getHeight(), screenshotFile);
     }
 
 }
