@@ -29,5 +29,10 @@
             <groupId>com.github.mike10004</groupId>
             <artifactId>native-helper</artifactId>
         </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>
