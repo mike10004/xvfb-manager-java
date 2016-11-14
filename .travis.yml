@@ -13,8 +13,9 @@ addons:
   firefox: "49.0"
 install: 
 - echo $JAVA_HOME
-- which java
-- find $JAVA_HOME -maxdepth 2 -type f
+- ls -l $(which java)
+- readlink $(which java)
+- find $JAVA_HOME -maxdepth 2 -type f || echo "find $JAVA_HOME failed with code $?"
 - $JAVA_HOME/bin/java -version || echo "exit $?: $JAVA_HOME/bin/java -version"
 - mvn compile test-compile --show-version --batch-mode
 script: mvn verify -B
