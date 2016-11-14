@@ -29,5 +29,20 @@ This code demonstrates the basics:
         processFuture.cancel(true);
     }
 
+
+Modules
+-------
+
+The purpose of each module is as follows:
+
+* **xvfb-manager**: the core library
+* **xvfb-testing**: a JUnit Rule 
+* **xvfb-selenium**: helpful code for running Selenium WebDriver with Xvfb
+* **xvfb-unittest-tools**: library only used by above projects for testing
+* **xvfb-manager-example**: executable program demonstrating Selenium usage
+
+Acknowledgements
+----------------
+
 The photo used in the unit tests is by George Chernilevsky - Own work, 
 CC BY-SA 4.0, https://commons.wikimedia.org/w/index.php?curid=34785750.
