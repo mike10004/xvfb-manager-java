@@ -106,13 +106,13 @@ public abstract class Poller<T> {
             sleeper.sleep(intervalMs);
             numPreviousPollAttempts++;
         }
-        final FinishReason pollResult;
+        final StopReason pollResult;
         if (timeout) {
-            pollResult = FinishReason.TIMEOUT;
+            pollResult = StopReason.TIMEOUT;
         } else if (evaluation.action == PollAction.ABORT) {
-            pollResult = FinishReason.ABORTED;
+            pollResult = StopReason.ABORTED;
         } else if (evaluation.action == PollAction.RESOLVE){
-            pollResult = FinishReason.RESOLVED;
+            pollResult = StopReason.RESOLVED;
         } else {
             throw new IllegalStateException("bug: unexpected combination of timeoutedness and StopReason == " + evaluation.action);
         }
@@ -180,7 +180,9 @@ public abstract class Poller<T> {
 
     /**
      * Class that represents the outcome of a poll. Instances of this type are constructed
-     * by the poller at the conclusion of polling.
+     * by the poller at the conclusion of all polling. To clarify: a poll outcome refers
+     * to the end result after many poll attempts, and a {@link PollAnswer poll answer}
+     * is the answer to any individual poll attempt.
      * @param <E> type of the resolved content
      */
     public static class PollOutcome<E> {
@@ -188,14 +190,14 @@ public abstract class Poller<T> {
         /**
          * Reason polling stopped.
          */
-        public final FinishReason reason;
+        public final StopReason reason;
 
         /**
          * An object that represents the resolved state of the poll.
          */
         public final @Nullable E content;
 
-        private PollOutcome(FinishReason reason, @Nullable E content) {
+        private PollOutcome(StopReason reason, @Nullable E content) {
             this.reason = checkNotNull(reason);
             this.content = content;
         }
@@ -212,7 +214,7 @@ public abstract class Poller<T> {
     /**
      * Enmeration of reasons that polling stopped.
      */
-    public enum FinishReason {
+    public enum StopReason {
 
         /**
          * State was resolved to the poller's satisfaction.
@@ -238,6 +240,10 @@ public abstract class Poller<T> {
      * {@link Poller#continuePolling() continuePolling()},
      * {@link Poller#abortPolling() abortPolling()}, and
      * {@link Poller#resolve(Object) resolve()} methods.
+     *
+     * <p>To clarify: a poll outcome refers
+     * to the end result after many poll attempts, and a poll answer
+     * is the answer to any individual poll attempt.</p>
      * @param <E> the type of content in the resolution
      */
     public static class PollAnswer<E> {

@@ -8,7 +8,7 @@ import com.github.mike10004.nativehelper.ProgramResult;
 import com.github.mike10004.nativehelper.ProgramWithOutputFiles;
 import com.github.mike10004.nativehelper.ProgramWithOutputFilesResult;
 import com.github.mike10004.nativehelper.ProgramWithOutputResult;
-import com.github.mike10004.xvfbmanager.Poller.FinishReason;
+import com.github.mike10004.xvfbmanager.Poller.StopReason;
 import com.github.mike10004.xvfbmanager.Poller.PollOutcome;
 import com.github.mike10004.xvfbmanager.DefaultXvfbController.Screenshooter;
 import com.google.common.base.Optional;
@@ -310,7 +310,7 @@ public class XvfbManager {
         } catch (InterruptedException e) {
             throw new XvfbException("interrupted while polling for display number", e);
         }
-        if (pollOutcome.reason == FinishReason.RESOLVED) {
+        if (pollOutcome.reason == StopReason.RESOLVED) {
             assert pollOutcome.content != null : "poll resolved but outcome content is null";
             return pollOutcome.content;
         } else {

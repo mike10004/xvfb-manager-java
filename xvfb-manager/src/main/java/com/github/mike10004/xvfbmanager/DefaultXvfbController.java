@@ -6,7 +6,7 @@ package com.github.mike10004.xvfbmanager;
 import com.github.mike10004.nativehelper.Program;
 import com.github.mike10004.nativehelper.ProgramWithOutputResult;
 import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
-import com.github.mike10004.xvfbmanager.Poller.FinishReason;
+import com.github.mike10004.xvfbmanager.Poller.StopReason;
 import com.github.mike10004.xvfbmanager.Poller.PollOutcome;
 import com.github.mike10004.xvfbmanager.XvfbManager.Screenshot;
 import com.google.common.annotations.VisibleForTesting;
@@ -91,7 +91,7 @@ public class DefaultXvfbController implements XvfbController {
                 return ready ? resolve(true) : continuePolling();
             }
         }.poll(pollIntervalMs, maxNumPolls);
-        boolean displayReady = (pollResult.reason == FinishReason.RESOLVED) && pollResult.content != null && pollResult.content;
+        boolean displayReady = (pollResult.reason == StopReason.RESOLVED) && pollResult.content != null && pollResult.content;
         if (!displayReady) {
             throw new XvfbException("display never became ready: " + pollResult);
         }
