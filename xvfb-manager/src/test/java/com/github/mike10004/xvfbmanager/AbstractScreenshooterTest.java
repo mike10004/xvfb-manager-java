@@ -26,7 +26,7 @@ public class AbstractScreenshooterTest {
     public void DefaultScreenshot_convertToPnmFile() throws Exception {
         File xwdFile = tmp.newFile("example.xwd");
         ByteSources.gunzipping(getClass().getResource("/example.xwd.gz")).copyTo(Files.asByteSink(xwdFile));
-        XwdScreenshooter.DefaultScreenshot screenshot = new XwdScreenshooter.DefaultScreenshot(xwdFile, tmp.newFolder().toPath());
+        XwdtopnmScreenshot screenshot = new XwdtopnmScreenshot(xwdFile, tmp.newFolder().toPath());
         File pnmFile = tmp.newFile("example.ppm");
         screenshot.convertToPnmFile(pnmFile);
         ImageInfo info = ImageInfos.read(Files.asByteSource(pnmFile));

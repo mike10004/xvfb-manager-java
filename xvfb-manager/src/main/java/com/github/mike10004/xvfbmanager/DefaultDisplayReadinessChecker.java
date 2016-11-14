@@ -16,6 +16,12 @@ import static com.github.mike10004.nativehelper.Program.running;
  */
 public class DefaultDisplayReadinessChecker implements XvfbManager.DisplayReadinessChecker {
 
+    /**
+     * Checks display readiness. Executes {@code xdpyinfo} and returns true on
+     * a clean exit code.
+     * @param display the display to check, e.g. ":123"
+     * @return true iff {@code xdpyinfo} exits clean
+     */
     @Override
     public boolean checkReadiness(String display) {
         ProgramWithOutputStringsResult result = running("xdpyinfo")

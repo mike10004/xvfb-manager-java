@@ -10,6 +10,7 @@ import com.github.mike10004.nativehelper.ProgramWithOutputFilesResult;
 import com.github.mike10004.nativehelper.ProgramWithOutputResult;
 import com.github.mike10004.xvfbmanager.Poller.FinishReason;
 import com.github.mike10004.xvfbmanager.Poller.PollOutcome;
+import com.github.mike10004.xvfbmanager.DefaultXvfbController.Screenshooter;
 import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
 import com.google.common.io.CharSource;
@@ -43,6 +44,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
+/**
+ * Class that helps manage the creation of virtual framebuffer processes.
+ */
 public class XvfbManager {
 
     private static final Logger log = LoggerFactory.getLogger(XvfbManager.class);
@@ -60,6 +64,11 @@ public class XvfbManager {
         this(resolveXvfbExecutable(), XvfbConfig.DEFAULT);
     }
 
+    /**
+     * Constructs an instance of the class with a given configuration.
+     * @param xvfbConfig the configuration
+     * @throws IOException
+     */
     public XvfbManager(XvfbConfig xvfbConfig) throws IOException {
         this(resolveXvfbExecutable(), xvfbConfig);
     }
@@ -119,11 +128,8 @@ public class XvfbManager {
         return new DefaultDisplayReadinessChecker();
     }
 
-    protected DefaultXvfbController.Builder createControllerBuilder(String display, File framebufferDir) {
-        return DefaultXvfbController.builder(display)
-                .withReadinessChecker(createDisplayReadinessChecker(display, framebufferDir))
-                .withScreenshooter(createScreenshooter(display, framebufferDir))
-                .withSleeper(createSleeper());
+    protected DefaultXvfbController createController(ListenableFuture<? extends ProgramWithOutputResult> future, String display, File framebufferDir) {
+        return new DefaultXvfbController(future, display, createDisplayReadinessChecker(display, framebufferDir), createScreenshooter(display, framebufferDir), createSleeper());
     }
 
     /**
@@ -221,7 +227,7 @@ public class XvfbManager {
         } else {
             checkState(display != null, "display should have been set manually from %s", displayNumber);
         }
-        DefaultXvfbController controller = createControllerBuilder(display, framebufferDir.toFile()).build(xvfbFuture);
+        DefaultXvfbController controller = createController(xvfbFuture, display, framebufferDir.toFile());
         Futures.addCallback(xvfbFuture, new AbortFlagSetter(controller));
         return controller;
     }
@@ -295,7 +301,7 @@ public class XvfbManager {
                         log.debug("last line of xvfb output is not an integer: {}", StringUtils.abbreviate(lastLine, 128));
                     }
                 }
-                return continuePolling(null);
+                return continuePolling();
             }
         };
         PollOutcome<Integer> pollOutcome;
@@ -383,13 +389,6 @@ public class XvfbManager {
         File getRawFile();
 
         void convertToPnmFile(File pnmFile) throws IOException;
-    }
-
-    /**
-     * Interface for a class that can capture a screenshot of a virtual framebuffer.
-     */
-    public interface Screenshooter {
-        Screenshot capture() throws IOException, XvfbException;
     }
 
     static class LoggingCallback implements FutureCallback<ProgramWithOutputResult> {

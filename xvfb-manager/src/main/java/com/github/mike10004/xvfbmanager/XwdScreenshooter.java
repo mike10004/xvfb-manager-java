@@ -38,7 +38,7 @@ public class XwdScreenshooter extends AbstractScreenshooter {
         if (xwdResult.getExitCode() != 0) {
             throw new DefaultScreenshooterException("xwd failed with code " + xwdResult.getExitCode() + " and stderr: " + stderrText);
         }
-        return new DefaultScreenshot(xwdFile, outputDir.toPath());
+        return new XwdtopnmScreenshot(xwdFile, outputDir.toPath());
     }
 
 }

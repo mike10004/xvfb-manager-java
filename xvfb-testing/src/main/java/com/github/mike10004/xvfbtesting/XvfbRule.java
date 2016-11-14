@@ -25,6 +25,12 @@ public class XvfbRule extends ExternalResource {
     private transient XvfbController xvfbController;
     private final boolean disabled;
 
+    /**
+     * Creates a default rule instance that auto-selects the display number.
+     * Use a {@link #builder() builder} if you want to customize the
+     * {@link XvfbManager manager} instance, specify the display number, or
+     * customize other aspects of operation.
+     */
     public XvfbRule() {
         this(createDefaultXvfbManager(), null, false);
     }
@@ -48,29 +54,54 @@ public class XvfbRule extends ExternalResource {
         }
     }
 
+    /**
+     * Returns a new builder of rule instances.
+     * @return a new builder instance
+     * @see Builder
+     */
     public static Builder builder() {
         return new Builder();
     }
 
+    /**
+     * Builder class for rule instances.
+     * @see XvfbRule
+     */
     public static class Builder {
         private XvfbManager xvfbManager;
         private boolean disabled;
         private @Nullable Integer displayNumber;
 
+        /**
+         * Builds a rule instance.
+         * @return a new rule instance
+         */
         public XvfbRule build() {
             return new XvfbRule(xvfbManager == null ? createDefaultXvfbManager() : xvfbManager, displayNumber, disabled);
         }
 
+        /**
+         * Sets the manager instance to be used in building a rule.
+         * @return this instance
+         */
         public Builder manager(XvfbManager xvfbManager) {
             this.xvfbManager = checkNotNull(xvfbManager);
             return this;
         }
 
+        /**
+         * Sets the disabled flag to true.
+         * @return this instance
+         */
         public Builder disabled() {
             disabled = true;
             return this;
         }
 
+        /**
+         * Sets the disabledness
+         * @return this instance
+         */
         public Builder disabledOnWindows() {
             if (Platforms.getPlatform().isWindows()) {
                 disabled = true;
@@ -78,11 +109,22 @@ public class XvfbRule extends ExternalResource {
             return this;
         }
 
+        /**
+         * Sets the display number to be automatically selected.
+         * This uses the {@code -displayfd} option to {@code Xvfb}.
+         * @return this instance
+         */
         public Builder autoDisplay() {
             displayNumber = null;
             return this;
         }
 
+        /**
+         * Sets the display number of the rule instance being built.
+         * Use {@link #autoDisplay()} to automatically select an unused
+         * display number.
+         * @return this instance
+         */
         public Builder onDisplay(int displayNumber) {
             this.displayNumber = checkDisplayNumber(displayNumber);
             return this;
@@ -100,7 +142,7 @@ public class XvfbRule extends ExternalResource {
         prepare();
     }
 
-    public void prepare() throws IOException {
+    protected void prepare() throws IOException {
         checkState(xvfbController == null, "xvfbController already created");
         if (!disabled) {
             temporaryFolder.create();
@@ -117,7 +159,7 @@ public class XvfbRule extends ExternalResource {
         cleanUp();
     }
 
-    public void cleanUp() {
+    protected void cleanUp() {
         XvfbController xvfbController_ = xvfbController;
         if (xvfbController_ != null) {
             xvfbController_.stop();
@@ -130,7 +172,7 @@ public class XvfbRule extends ExternalResource {
      * @return the controller; never null
      * @throws IllegalStateException if controller has not been created yet
      */
-    public XvfbController getXvfbController() {
+    public XvfbController getController() {
         XvfbController xvfbController_ = xvfbController;
         checkState(xvfbController_ != null, "xvfbController not created yet; this rule is disabled or prepare()/before() method has not yet been invoked");
         return xvfbController_;

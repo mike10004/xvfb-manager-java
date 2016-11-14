@@ -6,9 +6,11 @@
 package com.github.mike10004.xvfbmanager;
 
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -17,15 +19,20 @@ import java.util.List;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
+/**
+ * Implementation of a tree node that uses an array list for its children.
+ * @param <T> the label type
+ */
+@NotThreadSafe
 public class ListTreeNode<T> implements TreeNode<T> {
 
     private TreeNode<T> parent;
     private final T label;
-    private final List<TreeNode<T>> children;
+    private List<TreeNode<T>> children;
 
     public ListTreeNode(T label) {
         this.label = checkNotNull(label, "label must be non-null");
-        children = new ArrayList<>();
+        children = ImmutableList.of();
     }
 
     @Override
@@ -35,7 +42,12 @@ public class ListTreeNode<T> implements TreeNode<T> {
 
     @Override
     public Iterable<TreeNode<T>> children() {
-        return Collections.unmodifiableList(children);
+        List<TreeNode<T>> children_ = children;
+        if (children_ instanceof ImmutableList) {
+            return children_;
+        } else {
+            return Collections.unmodifiableList(children);
+        }
     }
 
     @Override
@@ -69,7 +81,11 @@ public class ListTreeNode<T> implements TreeNode<T> {
 
     @Override
     public ListTreeNode<T> addChild(TreeNode<T> child) {
-        children.add(child);
+        List<TreeNode<T>> children_ = children;
+        if (children_ instanceof ImmutableList) {
+            this.children = children_ = new ArrayList(children_);
+        }
+        children_.add(child);
         child.setParent(this);
         return this;
     }

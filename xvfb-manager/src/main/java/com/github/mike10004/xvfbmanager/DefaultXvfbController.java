@@ -8,6 +8,7 @@ import com.github.mike10004.nativehelper.ProgramWithOutputResult;
 import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
 import com.github.mike10004.xvfbmanager.Poller.FinishReason;
 import com.github.mike10004.xvfbmanager.Poller.PollOutcome;
+import com.github.mike10004.xvfbmanager.XvfbManager.Screenshot;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Optional;
@@ -16,7 +17,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.commons.io.FileUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -28,19 +28,33 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
+/**
+ * Default controller implementation. This implementation relies on a {@link ListenableFuture future}
+ * to listen to the status of the {@code Xvfb} process. It checks for
+ * a given window by executing {@code xwininfo} in {@link #pollForWindow(Predicate, long, int)}.
+ * Most other operations are handled by the service classes provided in
+ * the constructor.
+ */
 public class DefaultXvfbController implements XvfbController {
 
+    /**
+     * Default poll interval for {@link #waitUntilReady()}}.
+     */
     public static final long DEFAULT_POLL_INTERVAL_MS = 250;
+
+    /**
+     * Default max number of polls for {@link #waitUntilReady()}}.
+     */
     public static final int DEFAULT_MAX_NUM_POLLS = 8;
 
     private final ListenableFuture<? extends ProgramWithOutputResult> xvfbFuture;
     private final String display;
     private final XvfbManager.DisplayReadinessChecker displayReadinessChecker;
-    private final XvfbManager.Screenshooter screenshooter;
+    private final Screenshooter screenshooter;
     private final Sleeper sleeper;
     private final AtomicBoolean abort;
 
-    public DefaultXvfbController(ListenableFuture<? extends ProgramWithOutputResult> xvfbFuture, String display, XvfbManager.DisplayReadinessChecker displayReadinessChecker, XvfbManager.Screenshooter screenshooter, Sleeper sleeper) {
+    public DefaultXvfbController(ListenableFuture<? extends ProgramWithOutputResult> xvfbFuture, String display, XvfbManager.DisplayReadinessChecker displayReadinessChecker, Screenshooter screenshooter, Sleeper sleeper) {
         this.xvfbFuture = checkNotNull(xvfbFuture);
         this.display = checkNotNull(display);
         this.displayReadinessChecker = checkNotNull(displayReadinessChecker);
@@ -62,29 +76,8 @@ public class DefaultXvfbController implements XvfbController {
         return display;
     }
 
-    static class ReadinessPollingException extends XvfbException {
-        public ReadinessPollingException() {
-        }
-
-        public ReadinessPollingException(String message) {
-            super(message);
-        }
-
-        public ReadinessPollingException(String message, Throwable cause) {
-            super(message, cause);
-        }
-
-        public ReadinessPollingException(Throwable cause) {
-            super(cause);
-        }
-    }
-
-    private boolean checkAbort() throws ReadinessPollingException {
-        boolean w = abort.get();
-        if (w) {
-            throw new ReadinessPollingException("not abort");
-        }
-        return w;
+    private boolean checkAbort() {
+        return abort.get();
     }
 
     public void waitUntilReady(long pollIntervalMs, int maxNumPolls) throws InterruptedException {
@@ -95,7 +88,7 @@ public class DefaultXvfbController implements XvfbController {
                     return abortPolling();
                 }
                 boolean ready = displayReadinessChecker.checkReadiness(display);
-                return ready ? resolve(true) : continuePolling(false);
+                return ready ? resolve(true) : continuePolling();
             }
         }.poll(pollIntervalMs, maxNumPolls);
         boolean displayReady = (pollResult.reason == FinishReason.RESOLVED) && pollResult.content != null && pollResult.content;
@@ -116,10 +109,6 @@ public class DefaultXvfbController implements XvfbController {
         return screenshooter.capture();
     }
 
-    protected static Builder builder(String display) {
-        return new Builder(display);
-    }
-
     /**
      * Invokes {@link #stop()}.
      */
@@ -128,44 +117,42 @@ public class DefaultXvfbController implements XvfbController {
         stop();
     }
 
-    protected static class Builder {
-        private final String display;
-        private XvfbManager.DisplayReadinessChecker checker;
-        private XvfbManager.Screenshooter screenshooter;
-        private Sleeper sleeper;
-
-        public Builder(String display) {
-            this.display = checkNotNull(display);
-            checkArgument(!display.isEmpty(), "display variable value must be nonempty");
-            this.sleeper = Sleeper.DefaultSleeper.getInstance();
-            this.screenshooter = new XwdScreenshooter(display, FileUtils.getTempDirectory());
-        }
-
-        public Builder withReadinessChecker(XvfbManager.DisplayReadinessChecker checker) {
-            this.checker = checkNotNull(checker);
-            return this;
-        }
-
-        public Builder withScreenshooter(XvfbManager.Screenshooter screenshooter) {
-            this.screenshooter = checkNotNull(screenshooter);
-            return this;
-        }
-
-        public Builder withSleeper(Sleeper sleeper) {
-            this.sleeper = checkNotNull(sleeper);
-            return this;
-        }
-
-        public DefaultXvfbController build(ListenableFuture<? extends ProgramWithOutputResult> xvfbFuture) {
-            return new DefaultXvfbController(xvfbFuture, display, checker, screenshooter, sleeper);
-        }
-    }
-
     @Override
     public Optional<TreeNode<XWindow>> pollForWindow(Predicate<XWindow> windowFinder, long intervalMs, int maxPollAttempts) throws InterruptedException {
         XWindowPoller poller = new XWindowPoller(display, windowFinder);
         PollOutcome<TreeNode<XWindow>> pollResult = poller.poll(intervalMs, maxPollAttempts);
         return Optional.fromNullable(pollResult.content);
+    }
+
+    /**
+     * Interface for a class that can capture a screenshot of a virtual framebuffer.
+     */
+    public interface Screenshooter {
+        /**
+         * Captures a screenshot.
+         * @return the screenshot
+         * @throws IOException
+         * @throws XvfbException
+         */
+        Screenshot capture() throws IOException, XvfbException;
+        @SuppressWarnings("unused")
+        class DefaultScreenshooterException extends XvfbException {
+            public DefaultScreenshooterException() {
+            }
+
+            public DefaultScreenshooterException(String message) {
+                super(message);
+            }
+
+            public DefaultScreenshooterException(String message, Throwable cause) {
+                super(message, cause);
+            }
+
+            public DefaultScreenshooterException(Throwable cause) {
+                super(cause);
+            }
+        }
+
     }
 
     private static class XWindowPoller extends Poller<TreeNode<XWindow>> {
@@ -199,13 +186,13 @@ public class DefaultXvfbController implements XvfbController {
                         });
                         return resolve(targetWindowNode);
                     } else {
-                        return continuePolling(root);
+                        return continuePolling();
                     }
                 } catch (IOException e) {
                     throw new XvfbException(e);
                 }
             } else {
-                return continuePolling(null);
+                return continuePolling();
             }
         }
     }

@@ -12,10 +12,13 @@ public interface Sleeper {
     /**
      * Sleep for the given number of milliseconds.
      * @param millis the sleep duration
-     * @throws InterruptedException
+     * @throws InterruptedException if sleep is interrupted
      */
     void sleep(long millis) throws InterruptedException;
 
+    /**
+     * Default sleeper implementation. Uses {@link Thread#sleep(long)}.
+     */
     class DefaultSleeper implements Sleeper {
 
         private DefaultSleeper() {
@@ -23,6 +26,10 @@ public interface Sleeper {
 
         private static final DefaultSleeper instance = new DefaultSleeper();
 
+        /**
+         * Gets the singleton instance of this class.
+         * @return the singleton
+         */
         public static DefaultSleeper getInstance() {
             return instance;
         }

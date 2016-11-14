@@ -8,14 +8,33 @@ import com.google.common.base.Supplier;
 
 import javax.annotation.Nullable;
 
+import java.util.Iterator;
+
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
+/**
+ * Class that facilitates polling for an arbitrary condition. Polling is
+ * the act of repeatedly querying the state at defined intervals. Polling
+ * stops when this poller's {@link #check(int) evaluation function}
+ * answers with a reason to stop, or the iterator of intervals to wait
+ * between polls is exhausted. Reasons to stop include
+ * {@link PollAction#RESOLVE resolution}, meaning the poller is satisfied
+ * with the result, or {@link PollAction#ABORT abortion} meaning polling
+ * must stop early without a resolution.
+ *
+ * @param <T>
+ */
 public abstract class Poller<T> {
 
     private final Sleeper sleeper;
 
+    /**
+     * Creates a new poller. The poller waits between polls using the
+     * default {@link Sleeper}. Subclasses can use an alternate sleeper,
+     * is helpful if you want to test your poller without actually waiting.
+     */
     public Poller() {
         this(DefaultSleeper.getInstance());
     }
@@ -24,15 +43,62 @@ public abstract class Poller<T> {
         this.sleeper = checkNotNull(sleeper);
     }
 
+    /**
+     * Polls at regular intervals.
+     * @param intervalMs the interval in milliseconds
+     * @param maxNumPolls the maximum number of polls to be executed
+     * @return the poll outcome
+     * @throws InterruptedException if waiting is interrupted
+     */
     public PollOutcome<T> poll(long intervalMs, int maxNumPolls) throws InterruptedException {
-        checkArgument(intervalMs > 0, "interval must be > 0, not %s", intervalMs);
+        return poll(new RegularIntervals(intervalMs, maxNumPolls));
+    }
+
+    protected static class RegularIntervals implements Iterator<Long> {
+
+        private final Long intervalMs;
+        private final int maxNumPolls;
+        private int numPreviousPollAttempts;
+
+        public RegularIntervals(long intervalMs, int maxNumPolls) {
+            checkArgument(intervalMs > 0, "interval must be > 0, not %s", intervalMs);
+            this.intervalMs = intervalMs;
+            this.maxNumPolls = maxNumPolls;
+        }
+
+        @Override
+        public synchronized boolean hasNext() {
+            return numPreviousPollAttempts < maxNumPolls;
+        }
+
+        @Override
+        public synchronized Long next() {
+            numPreviousPollAttempts++;
+            return intervalMs;
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException("remove() not supported on " + this);
+        }
+    }
+
+    /**
+     * Starts polling and returns an outcome when polling stops.
+     * @param intervalsMs an iterator of interval lengths in milliseconds
+     * @return the poll outcome
+     * @throws InterruptedException if waiting is interrupted
+     */
+    public PollOutcome<T> poll(Iterator<Long> intervalsMs) throws InterruptedException {
         int numPreviousPollAttempts = 0;
         PollAnswer<T> evaluation = null;
         boolean timeout;
         for (;;) {
-            if (timeout = numPreviousPollAttempts >= maxNumPolls) {
+            if (timeout = !intervalsMs.hasNext()) {
                 break;
             }
+            long intervalMs = checkNotNull(intervalsMs.next(), "interval iterator must return non-nulls").longValue();
+            checkArgument(intervalMs > 0, "intervals iterator must return positive values; got %s", intervalMs);
             evaluation = checkAndForceNotNull(numPreviousPollAttempts);
             if (evaluation.action != PollAction.CONTINUE) {
                 break;
@@ -67,16 +133,12 @@ public abstract class Poller<T> {
         return value == null ? PollAnswers.getResolve() : new PollAnswer<>(PollAction.RESOLVE, value);
     }
 
-    protected static <E> PollAnswer<E> continuePolling(@Nullable E value) {
-        return value == null ? PollAnswers.getContinue() : new PollAnswer<>(PollAction.CONTINUE, value);
+    protected static <E> PollAnswer<E> continuePolling() {
+        return PollAnswers.getContinue();
     }
 
     protected static <E> PollAnswer<E> abortPolling(@Nullable E value) {
         return value == null ? PollAnswers.getAbort() : new PollAnswer<>(PollAction.ABORT, value);
-    }
-
-    protected static <E> PollAnswer<E> continuePolling() {
-        return continuePolling(null);
     }
 
     protected static <E> PollAnswer<E> abortPolling() {
@@ -116,11 +178,24 @@ public abstract class Poller<T> {
         }
     }
 
+    /**
+     * Class that represents the outcome of a poll. Instances of this type are constructed
+     * by the poller at the conclusion of polling.
+     * @param <E> type of the resolved content
+     */
     public static class PollOutcome<E> {
+
+        /**
+         * Reason polling stopped.
+         */
         public final FinishReason reason;
+
+        /**
+         * An object that represents the resolved state of the poll.
+         */
         public final @Nullable E content;
 
-        public PollOutcome(FinishReason reason, E content) {
+        private PollOutcome(FinishReason reason, @Nullable E content) {
             this.reason = checkNotNull(reason);
             this.content = content;
         }
@@ -134,28 +209,99 @@ public abstract class Poller<T> {
         }
     }
 
+    /**
+     * Enmeration of reasons that polling stopped.
+     */
     public enum FinishReason {
+
+        /**
+         * State was resolved to the poller's satisfaction.
+         */
         RESOLVED,
+
+        /**
+         * State was not resolved to the poller's satisfaction,
+         * but polling must cease anyway.
+         */
         ABORTED,
+
+        /**
+         * The poller's iterator of intervals was exhausted
+         * prior to resolution or abortion of polling.
+         */
         TIMEOUT
     }
 
+    /**
+     * Class that represents an answer in response to a poll request.
+     * Instances of this class are constructed with the poller's
+     * {@link Poller#continuePolling() continuePolling()},
+     * {@link Poller#abortPolling() abortPolling()}, and
+     * {@link Poller#resolve(Object) resolve()} methods.
+     * @param <E> the type of content in the resolution
+     */
     public static class PollAnswer<E> {
+
+        /**
+         * Action the poller should take after receiving this answer.
+         */
         public final PollAction action;
+
+        /**
+         * Content of the answer. If the {@link #action} is {@link PollAction#RESOLVE},
+         * then this is likely to be non-null. Otherwise, it is likely to be null.
+         * Implementations may elect to flout these conventions.
+         */
         public final @Nullable E content;
 
-        public PollAnswer(PollAction action, E content) {
+        private PollAnswer(PollAction action, @Nullable E content) {
             this.action = checkNotNull(action);
             this.content = content;
         }
     }
 
+    /**
+     * Enumeration of actions a poller's check function can return.
+     */
     public enum PollAction {
+
+        /**
+         * Stop polling because the state in question has been resolved.
+         */
         RESOLVE,
+
+        /**
+         * Stop polling without a resolution.
+         */
         ABORT,
+
+        /**
+         * Keep polling.
+         */
         CONTINUE
     }
 
+    /**
+     * Checks whether the state being questioned has been resolved. Subclasses
+     * must override this method to return an {@link PollAnswer answer} that
+     * may or may not contain a content object. In a conventional implementation,
+     * if the state has been resolved, this method would return an answer with content
+     * object representing a resolution along with {@link PollAction#RESOLVE};
+     * if the state has not yet been resolved, this method would return
+     * {@code null} as the answer content along with {@link PollAction#CONTINUE} if
+     * we should continue polling or {@link PollAction#ABORT} if polling should stop
+     * immediately anyway.
+     *
+     * <p>Implementations of this method should return an answer constructed with the
+     * {@link #continuePolling()}, {@link #abortPolling()}, or {@link #resolve(Object)}
+     * methods.</p>
+     *
+     * <p>Unconventional implementations may elect to return a non-null content object
+     * with {@link PollAction#ABORT} to provide the {@link #poll(Iterator) poll()}
+     * caller a degenerate answer, perhaps indicating why state will never be resolved.</p>
+     * @param pollAttemptsSoFar the number of poll attempts prior to this poll attempt
+     * @return a poll answer
+     */
     protected abstract PollAnswer<T> check(int pollAttemptsSoFar);
 
     /**

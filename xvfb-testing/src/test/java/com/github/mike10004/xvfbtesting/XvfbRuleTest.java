@@ -10,8 +10,6 @@ import com.github.mike10004.xvfbunittesthelp.PackageManager;
 import com.github.mike10004.xvfbmanager.TreeNode;
 import com.github.mike10004.xvfbmanager.XvfbController;
 import com.github.mike10004.xvfbmanager.XvfbController.XWindow;
-import com.google.common.io.CharSource;
-import com.google.common.io.LineProcessor;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -77,7 +75,7 @@ public class XvfbRuleTest {
                 xvfb.before();
                 before();
                 try {
-                    use(xvfb.getXvfbController());
+                    use(xvfb.getController());
                 } finally {
                     try {
                         after();

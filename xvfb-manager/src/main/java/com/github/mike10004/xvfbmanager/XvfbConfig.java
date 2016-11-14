@@ -37,7 +37,8 @@ public class XvfbConfig {
     }
 
     /**
-     * Default configuration instance.
+     * Default configuration instance. This differs from the {@code 1280x1024x8} configuration that {@code Xvfb}
+     * uses by default, stated in the manual.
      */
     public static final XvfbConfig DEFAULT = new XvfbConfig("1280x1024x24+32");
 }
