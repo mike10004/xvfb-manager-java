@@ -10,4 +10,5 @@ addons:
     - xvfb
     - imagemagick
     - xdotool
+  firefox: "49.0"
 script: mvn verify -B
