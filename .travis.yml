@@ -14,8 +14,6 @@ addons:
 install: 
 - echo $JAVA_HOME
 - ls -l $(which java)
-- readlink $(which java)
-- find $JAVA_HOME -maxdepth 2 -type f || echo "find $JAVA_HOME failed with code $?"
-- $JAVA_HOME/bin/java -version || echo "exit $?: $JAVA_HOME/bin/java -version"
+- readlink -f $(which java)
 - mvn compile test-compile --show-version --batch-mode
 script: mvn verify -B
