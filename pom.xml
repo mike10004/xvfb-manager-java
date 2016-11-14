@@ -20,6 +20,8 @@
     </properties>
     <profiles>
     </profiles>
+    <description>Libraries for managing Xvfb virtual framebuffer processes in Java</description>
+    <url>https://github.com/mike10004/xvfb-manager-java</url>
     <inceptionYear>2016</inceptionYear>
     <licenses>
         <license>
