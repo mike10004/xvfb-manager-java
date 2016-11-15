@@ -70,7 +70,9 @@ public class XvfbManagerTest {
     @org.junit.BeforeClass
     public static void checkPrerequisities() throws IOException {
         PackageManager packageManager = PackageManager.getInstance();
-        for (String program : Iterables.concat(Arrays.asList("Xvfb"), DefaultXvfbController.getRequiredPrograms())) {
+        Iterable<String> requiredExecutables = Iterables.concat(Arrays.asList("Xvfb"),
+                DefaultXvfbController.getRequiredPrograms());
+        for (String program : requiredExecutables) {
             boolean installed = packageManager.queryCommandExecutable(program);
             Assumptions.assumeTrue(program + " must be installed for these tests to be executed", installed);
         }

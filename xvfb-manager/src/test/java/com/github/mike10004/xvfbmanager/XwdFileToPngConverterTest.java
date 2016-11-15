@@ -23,7 +23,7 @@ public class XwdFileToPngConverterTest {
     @BeforeClass
     public static void checkPrequisites() throws Exception {
         Iterable<String> prereqs = XwdFileToPngConverter.getRequiredPrograms();
-        Assumptions.assumeTrue("prequsities: " + prereqs, PackageManager.getInstance().queryCommandsExecutable(prereqs));
+        Assumptions.assumeTrue(prereqs + " are prerequsities", PackageManager.getInstance().queryAllCommandsExecutable(prereqs));
     }
 
     @Test

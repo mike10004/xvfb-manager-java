@@ -20,6 +20,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Arrays;
 
 public class XvfbManagerExampleTest {
 
@@ -63,11 +64,13 @@ public class XvfbManagerExampleTest {
 
     @org.junit.Test
     public void main_firefox() throws IOException {
+        Assumptions.assumeTrue("firefox must be installed", PackageManager.getInstance().queryCommandExecutable("firefox"));
         runMainWithArgs("firefox");
     }
 
     @org.junit.Test
     public void main_chrome() throws IOException {
+        Assumptions.assumeTrue("chrome or chromium must be installed", PackageManager.getInstance().queryAnyCommandExecutable(Arrays.asList("chromium", "google-chrome")));
         runMainWithArgs("chrome");
     }
 

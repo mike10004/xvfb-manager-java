@@ -8,7 +8,6 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.novetta.ibg.common.sys.Whicher;
 import org.apache.commons.lang3.StringUtils;
@@ -43,7 +42,7 @@ public abstract class PackageManager {
     public abstract String queryPackageVersion(String packageName) throws IOException;
 
     public boolean checkImageMagickInstalled() throws IOException {
-        return queryCommandsExecutable(getImageMagickCommands());
+        return queryAllCommandsExecutable(getImageMagickCommands());
     }
 
     public boolean checkPackageVersion(String packageName, int minimumMajor, int minimumMinor) throws IOException {
@@ -125,13 +124,22 @@ public abstract class PackageManager {
      * @param commands the commands
      * @return true iff all commands have corresponding executables
      */
-    public boolean queryCommandsExecutable(Iterable<String> commands) throws IOException {
+    public boolean queryAllCommandsExecutable(Iterable<String> commands) throws IOException {
         for (String command : commands) {
             if (!queryCommandExecutable(command)) {
                 return false;
             }
         }
         return true;
+    }
+
+    public boolean queryAnyCommandExecutable(Iterable<String> commands) throws IOException {
+        for (String command : commands) {
+            if (queryCommandExecutable(command)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static class FalseyPackageManager extends PackageManager {
