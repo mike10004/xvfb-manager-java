@@ -15,7 +15,7 @@ Quickstart - Core Library
     <dependency>
         <groupId>com.github.mike10004</groupId>
         <artifactId>xvfb-manager</artifactId>
-        <version>0.1</version>
+        <version>0.2</version>
     </dependency>
 
 ### Code
@@ -45,7 +45,7 @@ Quickstart - JUnit Rule
     <dependency>
         <groupId>com.github.mike10004</groupId>
         <artifactId>xvfb-testing</artifactId>
-        <version>0.1</version>
+        <version>0.2</version>
     </dependency>
 
 ### Code
