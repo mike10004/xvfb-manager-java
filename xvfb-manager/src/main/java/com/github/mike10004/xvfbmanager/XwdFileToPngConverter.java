@@ -9,6 +9,7 @@ import com.github.mike10004.nativehelper.Program;
 import com.github.mike10004.nativehelper.ProgramResult;
 import com.github.mike10004.nativehelper.ProgramWithOutputFiles;
 import com.github.mike10004.xvfbmanager.Screenshot.FileByteSource;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import org.apache.commons.io.output.ByteArrayOutputStream;
@@ -33,6 +34,10 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class XwdFileToPngConverter implements ScreenshotConverter<Screenshot, ImageioReadableScreenshot> {
 
     private static final Logger log = LoggerFactory.getLogger(XwdFileToPngConverter.class);
+
+    private static final String PROG_XWDTOPNM = "xwdtopnm";
+
+    private static final ImmutableSet<String> requiredPrograms = ImmutableSet.of(PROG_XWDTOPNM);
 
     private final Path tempDir;
 
@@ -86,7 +91,7 @@ public class XwdFileToPngConverter implements ScreenshotConverter<Screenshot, Im
     }
 
     public ImageioReadableScreenshot convert(Screenshot source, File pnmFile, File stderrFile, File inputFile) throws IOException, XvfbException {
-        ProgramWithOutputFiles xwdtopnm = Program.running("xwdtopnm")
+        ProgramWithOutputFiles xwdtopnm = Program.running(PROG_XWDTOPNM)
                 .args("-")
                 .reading(inputFile)
                 .outputToFiles(pnmFile, stderrFile);
@@ -112,4 +117,9 @@ public class XwdFileToPngConverter implements ScreenshotConverter<Screenshot, Im
             }
         }
     }
+
+    public static Iterable<String> getRequiredPrograms() {
+        return requiredPrograms;
+    }
+
 }
