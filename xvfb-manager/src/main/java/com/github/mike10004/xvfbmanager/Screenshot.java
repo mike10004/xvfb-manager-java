@@ -32,7 +32,7 @@ public interface Screenshot {
      * Gets a byte source providing access to a screenshot.
      * @return the byte source
      */
-    ByteSource getRawFile();
+    ByteSource asByteSource();
 
     class FileByteSource extends ByteSource {
 
@@ -125,7 +125,7 @@ public interface Screenshot {
         }
 
         @Override
-        public B getRawFile() {
+        public B asByteSource() {
             return byteSource;
         }
     }

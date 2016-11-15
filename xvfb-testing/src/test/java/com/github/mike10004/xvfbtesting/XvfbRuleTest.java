@@ -20,7 +20,6 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.commons.lang3.StringUtils;
-import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
@@ -151,7 +150,7 @@ public class XvfbRuleTest {
                     System.out.println("capturing screenshot");
                     File pngFile = new File("target", "post-xdotool-" + System.currentTimeMillis() + ".png");
                     XwdFileScreenshot screenshot = (XwdFileScreenshot) ctrl.getScreenshooter().capture();
-                    new XwdFileToPngConverter(tempDir.toPath()).convert(screenshot).getRawFile().copyTo(Files.asByteSink(pngFile));
+                    new XwdFileToPngConverter(tempDir.toPath()).convert(screenshot).asByteSource().copyTo(Files.asByteSink(pngFile));
                 }
                 long getStart = System.currentTimeMillis();
                 ProgramWithOutputStringsResult xmessageResult = xmessageFuture.get(500, TimeUnit.MILLISECONDS);

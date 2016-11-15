@@ -21,7 +21,6 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.novetta.ibg.common.image.ImageInfo;
 import com.novetta.ibg.common.image.ImageInfos;
-import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 
@@ -186,8 +185,8 @@ public class XvfbManagerTest {
         checkState(screenshot instanceof XwdFileScreenshot, "not an ImageIO-readable screenshot: %s", screenshot);
         ImageioReadableScreenshot pngScreenshot = new XwdFileToPngConverter(tmp.newFolder().toPath()).convert(screenshot);
         File pngFile = File.createTempFile("screenshot", ".png", tmp.getRoot());
-        pngScreenshot.getRawFile().copyTo(Files.asByteSink(pngFile));
-        ImageInfo imageInfo = ImageInfos.read(pngScreenshot.getRawFile());
+        pngScreenshot.asByteSource().copyTo(Files.asByteSink(pngFile));
+        ImageInfo imageInfo = ImageInfos.read(pngScreenshot.asByteSource());
         System.out.format("%s%n", describe(imageInfo));
         BufferedImage image = ImageIO.read(pngFile);
         checkState(image != null, "image unreadable: %s", pngFile);

@@ -18,7 +18,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Implementation of a screenshooter that executes an X utility.
  * Uses {@code xwd} to capture a screenshot of the
- * framebuffer. The raw output file (as returned by {@link Screenshot#getRawFile()}
+ * framebuffer. The raw output file (as returned by {@link Screenshot#asByteSource()}
  * is in {@code xwd} format. Use the {@code xwdtopnm} program to export it to a PNM file.
  */
 public class XwdScreenshooter implements Screenshooter<XwdFileScreenshot> {

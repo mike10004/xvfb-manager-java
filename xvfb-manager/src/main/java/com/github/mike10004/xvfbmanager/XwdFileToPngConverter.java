@@ -71,7 +71,7 @@ public class XwdFileToPngConverter implements ScreenshotConverter<Screenshot, Im
     public ImageioReadableScreenshot convert(Screenshot source, File pnmFile, File stderrFile) throws IOException, XvfbException {
         final File inputFile;
         final boolean deleteInputFile;
-        ByteSource inputSource = source.getRawFile();
+        ByteSource inputSource = source.asByteSource();
         if (inputSource instanceof FileByteSource) {
             inputFile = ((FileByteSource)inputSource).file;
             deleteInputFile = false;

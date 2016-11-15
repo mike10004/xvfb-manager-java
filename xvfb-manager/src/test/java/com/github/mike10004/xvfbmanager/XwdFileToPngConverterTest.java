@@ -32,7 +32,7 @@ public class XwdFileToPngConverterTest {
         ByteSources.gunzipping(getClass().getResource("/example.xwd.gz")).copyTo(Files.asByteSink(xwdFile));
         XwdFileToPngConverter converter = new XwdFileToPngConverter(tmp.getRoot().toPath());
         ImageioReadableScreenshot pngShot = converter.convert(XwdFileScreenshot.from(xwdFile));
-        ImageInfo info = ImageInfos.read(pngShot.getRawFile());
+        ImageInfo info = ImageInfos.read(pngShot.asByteSource());
         assertEquals("format", ImageInfo.Format.PNG, info.getFormat());
     }
 
