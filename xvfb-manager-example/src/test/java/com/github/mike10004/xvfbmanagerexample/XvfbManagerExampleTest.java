@@ -2,6 +2,7 @@ package com.github.mike10004.xvfbmanagerexample;
 
 import com.github.mike10004.xvfbunittesthelp.Assumptions;
 import com.github.mike10004.xvfbunittesthelp.PackageManager;
+import com.google.common.base.Preconditions;
 import com.google.common.io.Resources;
 import com.google.common.net.HttpHeaders;
 import com.google.common.net.MediaType;
@@ -34,6 +35,11 @@ public class XvfbManagerExampleTest {
     public static void checkPrequisites() throws IOException {
         Assumptions.assumeTrue("Xvfb must be executable for these tests", PackageManager.getInstance().queryCommandExecutable("Xvfb"));
         Assumptions.assumeTrue("xvfb version not high enough to test auto-display support", PackageManager.getInstance().queryAutoDisplaySupport());
+        String ghTokenName = System.getProperty("wdm.gitHubTokenName", "");
+        String ghTokenSecret = System.getProperty("wdm.gitHubTokenSecret", "");
+        Preconditions.checkState(!ghTokenName.startsWith("$")); // indicates env var usage error
+        Preconditions.checkState(!ghTokenSecret.startsWith("$"));
+        System.out.format("github token name/secret have lengths %d and %d%n", ghTokenName.length(), ghTokenSecret.length());
     }
 
     @org.junit.Test
