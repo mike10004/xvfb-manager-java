@@ -9,6 +9,7 @@ import com.galenframework.rainbow4j.colorscheme.ColorDistribution;
 import com.github.mike10004.nativehelper.Program;
 import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
 import com.github.mike10004.xvfbmanager.XvfbController.XWindow;
+import com.github.mike10004.xvfbunittesthelp.Assumptions;
 import com.github.mike10004.xvfbunittesthelp.PackageManager;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
@@ -71,12 +72,12 @@ public class XvfbManagerTest {
         PackageManager packageManager = PackageManager.getInstance();
         for (String program : Iterables.concat(Arrays.asList("Xvfb"), DefaultXvfbController.getRequiredPrograms())) {
             boolean installed = packageManager.queryCommandExecutable(program);
-            Assume.assumeTrue(program + " must be installed for these tests to be executed", installed);
+            Assumptions.assumeTrue(program + " must be installed for these tests to be executed", installed);
         }
     }
     @org.junit.Test
     public void start_autoDisplay_trueColor() throws Exception {
-        Assume.assumeTrue("xvfb version not high enough to test auto-display support", PackageManager.getInstance().queryAutoDisplaySupport());
+        Assumptions.assumeTrue("xvfb version not high enough to test auto-display support", PackageManager.getInstance().queryAutoDisplaySupport());
         testWithConfigAndDisplay(new XvfbConfig("640x480x24"), null);
     }
 
@@ -86,7 +87,7 @@ public class XvfbManagerTest {
     }
 
     private void testWithConfigAndDisplay(XvfbConfig config, @Nullable Integer displayNumber) throws Exception {
-        Assume.assumeTrue("imagemagick must be installed", PackageManager.getInstance().checkImageMagickInstalled());
+        Assumptions.assumeTrue("imagemagick must be installed", PackageManager.getInstance().checkImageMagickInstalled());
         XvfbManager instance = new XvfbManager(config) {
             @Override
             protected DisplayReadinessChecker createDisplayReadinessChecker(String display, File framebufferDir) {
@@ -109,7 +110,7 @@ public class XvfbManagerTest {
         ctrl.waitUntilReady();
         if (takeScreenshots) {
             System.out.println("capturing screenshot before launching x program");
-            XvfbManager.Screenshot beforeScreenshot = ctrl.captureScreenshot();
+            Screenshot beforeScreenshot = ctrl.getScreenshooter().capture();
             checkScreenshot(beforeScreenshot, true, config);
         }
         String display = ctrl.getDisplay();
@@ -126,7 +127,7 @@ public class XvfbManagerTest {
         checkState(window.isPresent(), "never saw image magick window");
         if (takeScreenshots) {
             System.out.println("capturing screenshot after launching x program");
-            XvfbManager.Screenshot afterScreenshot = ctrl.captureScreenshot();
+            Screenshot afterScreenshot = ctrl.getScreenshooter().capture();
             checkScreenshot(afterScreenshot, false, config);
         }
         graphicalProgramFuture.cancel(true);
@@ -178,13 +179,16 @@ public class XvfbManagerTest {
                 .add("bpp", ii.getBitsPerPixel())
                 .toString();
     }
-    private void checkScreenshot(XvfbManager.Screenshot screenshot, boolean allBlackExpected, XvfbConfig config) throws IOException {
-        File pnmFile = File.createTempFile("screenshot", ".pnm", tmp.getRoot());
-        screenshot.convertToPnmFile(pnmFile);
-        ImageInfo imageInfo = ImageInfos.read(Files.asByteSource(pnmFile));
+
+    private void checkScreenshot(Screenshot screenshot, boolean allBlackExpected, XvfbConfig config) throws IOException {
+        checkState(screenshot instanceof XwdFileScreenshot, "not an ImageIO-readable screenshot: %s", screenshot);
+        ImageioReadableScreenshot pngScreenshot = new XwdFileToPngConverter(tmp.newFolder().toPath()).convert(screenshot);
+        File pngFile = File.createTempFile("screenshot", ".png", tmp.getRoot());
+        pngScreenshot.getRawFile().copyTo(Files.asByteSink(pngFile));
+        ImageInfo imageInfo = ImageInfos.read(pngScreenshot.getRawFile());
         System.out.format("%s%n", describe(imageInfo));
-        BufferedImage image = ImageIO.read(pnmFile);
-        checkState(image != null, "image unreadable: %s", pnmFile);
+        BufferedImage image = ImageIO.read(pngFile);
+        checkState(image != null, "image unreadable: %s", pngFile);
         ScreenSpace expectedScreen = ScreenSpace.parse(config.geometry);
         System.out.format("expecting %s%n", expectedScreen);
         assertEquals("width", expectedScreen.width, image.getWidth());

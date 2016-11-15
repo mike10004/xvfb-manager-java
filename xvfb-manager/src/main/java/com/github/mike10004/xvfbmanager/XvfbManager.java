@@ -10,7 +10,6 @@ import com.github.mike10004.nativehelper.ProgramWithOutputFilesResult;
 import com.github.mike10004.nativehelper.ProgramWithOutputResult;
 import com.github.mike10004.xvfbmanager.Poller.StopReason;
 import com.github.mike10004.xvfbmanager.Poller.PollOutcome;
-import com.github.mike10004.xvfbmanager.DefaultXvfbController.Screenshooter;
 import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
 import com.google.common.io.CharSource;
@@ -115,8 +114,8 @@ public class XvfbManager {
         return file.get();
     }
 
-    protected Screenshooter createScreenshooter(String display, File framebufferDir) {
-        return new FramebufferDirScreenshooter(display, framebufferDir, SCREEN, framebufferDir);
+    protected Screenshooter<?> createScreenshooter(String display, File framebufferDir) {
+        return new FramebufferDirScreenshooter(framebufferDir, SCREEN, framebufferDir);
     }
 
     protected Sleeper createSleeper() {
@@ -408,19 +407,6 @@ public class XvfbManager {
          * @return true iff the display is ready
          */
         boolean checkReadiness(String display);
-    }
-
-    /**
-     * Interface for screenshots of the current framebuffer.
-     */
-    public interface Screenshot {
-        /**
-         * Gets the pathname of a file containing the screenshot.
-         * @return the file
-         */
-        File getRawFile();
-
-        void convertToPnmFile(File pnmFile) throws IOException;
     }
 
     static class LoggingCallback implements FutureCallback<ProgramWithOutputResult> {

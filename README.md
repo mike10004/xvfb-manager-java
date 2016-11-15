@@ -21,19 +21,18 @@ Quickstart - Core Library
 ### Code
 
     XvfbManager manager = new XvfbManager();
-    try (XvfbController controller = manager.start()) {
+    try (final XvfbController controller = manager.start()) {
         controller.waitUntilReady();
-        final String display = controller.getDisplay();
         // start a graphical program on a different thread
         Future<Process> processFuture = Executors.newSingleThreadExecutor().submit(new Callable<Process>(){
             @Override
             public Process call() throws Exception {
                 ProcessBuilder pb = new ProcessBuilder();
-                pb.environment().put("DISPLAY", display);
+                pb.environment().put("DISPLAY", controller.getDisplay());
                 return pb.command("xclock").start();
             }
         });
-        Screenshot screenshot = controller.captureScreenshot();
+        Screenshot screenshot = controller.getScreenshooter().capture();
         // do something with screenshot
         processFuture.cancel(true);
     }

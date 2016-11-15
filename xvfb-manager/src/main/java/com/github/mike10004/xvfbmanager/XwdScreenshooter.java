@@ -5,7 +5,6 @@ package com.github.mike10004.xvfbmanager;
 
 import com.github.mike10004.nativehelper.Program;
 import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
-import com.github.mike10004.xvfbmanager.DefaultXvfbController.Screenshooter;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -19,10 +18,10 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Implementation of a screenshooter that executes an X utility.
  * Uses {@code xwd} to capture a screenshot of the
- * framebuffer. The raw output file (as returned by {@link XvfbManager.Screenshot#getRawFile()}
+ * framebuffer. The raw output file (as returned by {@link Screenshot#getRawFile()}
  * is in {@code xwd} format. Use the {@code xwdtopnm} program to export it to a PNM file.
  */
-public class XwdScreenshooter implements Screenshooter {
+public class XwdScreenshooter implements Screenshooter<XwdFileScreenshot> {
 
     private static final String PROG_XWD = "xwd";
 
@@ -43,7 +42,7 @@ public class XwdScreenshooter implements Screenshooter {
     }
 
     @Override
-    public XvfbManager.Screenshot capture() throws IOException, XvfbException {
+    public XwdFileScreenshot capture() throws IOException, XvfbException {
         File xwdFile = File.createTempFile("screenshot", ".xwd", outputDir);
         ProgramWithOutputStringsResult xwdResult = Program.running(PROG_XWD)
                 .args("-display", display, "-root", "-silent", "-out", xwdFile.getAbsolutePath())
@@ -54,7 +53,7 @@ public class XwdScreenshooter implements Screenshooter {
         if (xwdResult.getExitCode() != 0) {
             throw new DefaultScreenshooterException("xwd failed with code " + xwdResult.getExitCode() + " and stderr: " + stderrText);
         }
-        return new XwdtopnmScreenshot(xwdFile, outputDir.toPath());
+        return XwdFileScreenshot.from(xwdFile);
     }
 
 }

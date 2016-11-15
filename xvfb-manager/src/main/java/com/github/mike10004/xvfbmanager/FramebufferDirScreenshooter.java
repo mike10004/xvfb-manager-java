@@ -1,11 +1,9 @@
 /*
- * (c) 2016 Novetta
+ * (c) 2016 Mike Chaberski
  *
  * Created by mike
  */
 package com.github.mike10004.xvfbmanager;
-
-import com.github.mike10004.xvfbmanager.DefaultXvfbController.Screenshooter;
 
 import java.io.File;
 import java.io.IOException;
@@ -17,7 +15,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * framebuffer directory. See the {@code -fbdir} option to {@code Xvfb}
  * in the manual.
  */
-public class FramebufferDirScreenshooter implements Screenshooter {
+public class FramebufferDirScreenshooter implements Screenshooter<XwdFileScreenshot> {
 
     private final File outputDir;
     private final File framebufferDir;
@@ -41,12 +39,12 @@ public class FramebufferDirScreenshooter implements Screenshooter {
     }
 
     @Override
-    public XvfbManager.Screenshot capture() throws IOException, XvfbException {
+    public XwdFileScreenshot capture() throws IOException, XvfbException {
         File outputFile = constructOutputPathname(outputDir);
         String framebufferFilename = constructFramebufferFilename();
         File framebufferFile = new File(framebufferDir, framebufferFilename);
         com.google.common.io.Files.copy(framebufferFile, outputFile);
-        return new XwdtopnmScreenshot(outputFile, outputDir.toPath());
+        return XwdFileScreenshot.from(outputFile);
     }
 
     /**

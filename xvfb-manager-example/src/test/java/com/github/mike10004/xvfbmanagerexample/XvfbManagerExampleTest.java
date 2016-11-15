@@ -1,5 +1,6 @@
 package com.github.mike10004.xvfbmanagerexample;
 
+import com.github.mike10004.xvfbunittesthelp.Assumptions;
 import com.github.mike10004.xvfbunittesthelp.PackageManager;
 import com.google.common.io.Resources;
 import com.google.common.net.HttpHeaders;
@@ -30,8 +31,8 @@ public class XvfbManagerExampleTest {
 
     @BeforeClass
     public static void checkPrequisites() throws IOException {
-        Assume.assumeTrue("Xvfb must be executable for these tests", PackageManager.getInstance().queryCommandExecutable("Xvfb"));
-        Assume.assumeTrue("xvfb version not high enough to test auto-display support", PackageManager.getInstance().queryAutoDisplaySupport());
+        Assumptions.assumeTrue("Xvfb must be executable for these tests", PackageManager.getInstance().queryCommandExecutable("Xvfb"));
+        Assumptions.assumeTrue("xvfb version not high enough to test auto-display support", PackageManager.getInstance().queryAutoDisplaySupport());
     }
 
     /**

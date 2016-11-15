@@ -1,7 +1,5 @@
 /*
- * (c) 2016 Novetta
- *
- * Created by mike
+ * (c) 2016 Mike Chaberski
  */
 package com.github.mike10004.xvfbmanager;
 

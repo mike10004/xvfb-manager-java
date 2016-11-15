@@ -10,26 +10,21 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
-/*
- * (c) 2016 Novetta
- *
- * Created by mike
- */
-public class AbstractScreenshooterTest {
+public class XwdFileToPngConverterTest {
 
     @Rule
     public TemporaryFolder tmp = new TemporaryFolder();
 
     @Test
-    public void DefaultScreenshot_convertToPnmFile() throws Exception {
+    public void convert() throws Exception {
         File xwdFile = tmp.newFile("example.xwd");
         ByteSources.gunzipping(getClass().getResource("/example.xwd.gz")).copyTo(Files.asByteSink(xwdFile));
-        XwdtopnmScreenshot screenshot = new XwdtopnmScreenshot(xwdFile, tmp.newFolder().toPath());
-        File pnmFile = tmp.newFile("example.ppm");
-        screenshot.convertToPnmFile(pnmFile);
-        ImageInfo info = ImageInfos.read(Files.asByteSource(pnmFile));
-        assertEquals("format", ImageInfo.Format.PPM, info.getFormat());
+        XwdFileToPngConverter converter = new XwdFileToPngConverter(tmp.getRoot().toPath());
+        ImageioReadableScreenshot pngShot = converter.convert(XwdFileScreenshot.from(xwdFile));
+        ImageInfo info = ImageInfos.read(pngShot.getRawFile());
+        assertEquals("format", ImageInfo.Format.PNG, info.getFormat());
     }
+
 }

@@ -3,7 +3,6 @@
  */
 package com.github.mike10004.xvfbmanager;
 
-import com.github.mike10004.xvfbmanager.XvfbManager.Screenshot;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 
@@ -51,7 +50,7 @@ public interface XvfbController extends Closeable {
      * @throws IOException if I/O error occurs
      * @throws XvfbException if screenshooting goes awry
      */
-    XvfbManager.Screenshot captureScreenshot() throws IOException, XvfbException;
+    Screenshooter<?> getScreenshooter() throws XvfbException;
 
     /**
      * Class representing information about a window rendered by an X server.

@@ -8,7 +8,6 @@ import com.github.mike10004.nativehelper.ProgramWithOutputResult;
 import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
 import com.github.mike10004.xvfbmanager.Poller.PollOutcome;
 import com.github.mike10004.xvfbmanager.Poller.StopReason;
-import com.github.mike10004.xvfbmanager.XvfbManager.Screenshot;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Optional;
@@ -56,11 +55,11 @@ public class DefaultXvfbController implements XvfbController {
     private final ListenableFuture<? extends ProgramWithOutputResult> xvfbFuture;
     private final String display;
     private final XvfbManager.DisplayReadinessChecker displayReadinessChecker;
-    private final Screenshooter screenshooter;
+    private final Screenshooter<?> screenshooter;
     private final Sleeper sleeper;
     private final AtomicBoolean abort;
 
-    public DefaultXvfbController(ListenableFuture<? extends ProgramWithOutputResult> xvfbFuture, String display, XvfbManager.DisplayReadinessChecker displayReadinessChecker, Screenshooter screenshooter, Sleeper sleeper) {
+    public DefaultXvfbController(ListenableFuture<? extends ProgramWithOutputResult> xvfbFuture, String display, XvfbManager.DisplayReadinessChecker displayReadinessChecker, Screenshooter<?> screenshooter, Sleeper sleeper) {
         this.xvfbFuture = checkNotNull(xvfbFuture);
         this.display = checkNotNull(display);
         this.displayReadinessChecker = checkNotNull(displayReadinessChecker);
@@ -111,8 +110,8 @@ public class DefaultXvfbController implements XvfbController {
     }
 
     @Override
-    public XvfbManager.Screenshot captureScreenshot() throws IOException {
-        return screenshooter.capture();
+    public Screenshooter<?> getScreenshooter() throws XvfbException {
+        return screenshooter;
     }
 
     /**
@@ -128,37 +127,6 @@ public class DefaultXvfbController implements XvfbController {
         XWindowPoller poller = new XWindowPoller(display, windowFinder);
         PollOutcome<TreeNode<XWindow>> pollResult = poller.poll(intervalMs, maxPollAttempts);
         return Optional.fromNullable(pollResult.content);
-    }
-
-    /**
-     * Interface for a class that can capture a screenshot of a virtual framebuffer.
-     */
-    public interface Screenshooter {
-        /**
-         * Captures a screenshot.
-         * @return the screenshot
-         * @throws IOException if capture encounters an I/O error
-         * @throws XvfbException if a virtual framebuffer error occurs
-         */
-        Screenshot capture() throws IOException, XvfbException;
-        @SuppressWarnings("unused")
-        class DefaultScreenshooterException extends XvfbException {
-            public DefaultScreenshooterException() {
-            }
-
-            public DefaultScreenshooterException(String message) {
-                super(message);
-            }
-
-            public DefaultScreenshooterException(String message, Throwable cause) {
-                super(message, cause);
-            }
-
-            public DefaultScreenshooterException(Throwable cause) {
-                super(cause);
-            }
-        }
-
     }
 
     private static class XWindowPoller extends Poller<TreeNode<XWindow>> {

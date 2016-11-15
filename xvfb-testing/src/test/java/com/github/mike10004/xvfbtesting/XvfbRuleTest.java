@@ -6,18 +6,24 @@ package com.github.mike10004.xvfbtesting;
 import com.github.mike10004.nativehelper.Program;
 import com.github.mike10004.nativehelper.ProgramResult;
 import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
+import com.github.mike10004.xvfbmanager.XwdFileScreenshot;
+import com.github.mike10004.xvfbmanager.XwdFileToPngConverter;
+import com.github.mike10004.xvfbunittesthelp.Assumptions;
 import com.github.mike10004.xvfbunittesthelp.PackageManager;
 import com.github.mike10004.xvfbmanager.TreeNode;
 import com.github.mike10004.xvfbmanager.XvfbController;
 import com.github.mike10004.xvfbmanager.XvfbController.XWindow;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.io.Files;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Assume;
 import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
 import java.awt.Rectangle;
@@ -43,12 +49,15 @@ public class XvfbRuleTest {
     private static final AtomicInteger displayNumbers = new AtomicInteger(FIRST_DISPLAY_NUMBER);
     private static final boolean takeScreenshot = false;
 
+    @Rule
+    public TemporaryFolder tmp = new TemporaryFolder();
+
     @BeforeClass
     public static void checkPrerequisities() throws IOException {
-        for (String program : Iterables.concat(Arrays.asList("Xvfb", "xdotool", "xmessage"), takeScreenshot ? Arrays.asList("xwdtopnm") : ImmutableList.of())) {
+        for (String program : Iterables.concat(Arrays.asList("Xvfb", "xdotool", "xmessage"), takeScreenshot ? ImmutableList.of("xwdtopnm") : ImmutableList.of())) {
             boolean installed = PackageManager.getInstance().queryCommandExecutable(program);
             System.out.format("%s executable? %s%n", program, installed);
-            Assume.assumeTrue(program + " must be an executable program for these tests to be executed", installed);
+            Assumptions.assumeTrue(program + " must be an executable program for these tests to be executed", installed);
         }
     }
 
@@ -98,12 +107,17 @@ public class XvfbRuleTest {
     }
 
     private static class XMessageTester extends RuleUser {
-        public XMessageTester() {
+
+        private final File tempDir;
+
+        public XMessageTester(File tempDir) {
             super(null);
+            this.tempDir = tempDir;
         }
 
-        public XMessageTester(int displayNumber) {
+        public XMessageTester(int displayNumber, File tempDir) {
             super(displayNumber);
+            this.tempDir = tempDir;
         }
         @Override
         protected void use(XvfbController ctrl) throws Exception {
@@ -135,8 +149,9 @@ public class XvfbRuleTest {
                 System.out.format("xdotool: %s%n", xdotoolResult);
                 if (takeScreenshot) {
                     System.out.println("capturing screenshot");
-                    File pnmFile = new File("target", "post-xdotool-" + System.currentTimeMillis() + ".ppm");
-                    ctrl.captureScreenshot().convertToPnmFile(pnmFile);
+                    File pngFile = new File("target", "post-xdotool-" + System.currentTimeMillis() + ".png");
+                    XwdFileScreenshot screenshot = (XwdFileScreenshot) ctrl.getScreenshooter().capture();
+                    new XwdFileToPngConverter(tempDir.toPath()).convert(screenshot).getRawFile().copyTo(Files.asByteSink(pngFile));
                 }
                 long getStart = System.currentTimeMillis();
                 ProgramWithOutputStringsResult xmessageResult = xmessageFuture.get(500, TimeUnit.MILLISECONDS);
@@ -154,12 +169,12 @@ public class XvfbRuleTest {
 
     @org.junit.Test
     public void definedDisplayNumber() throws Exception {
-        new XMessageTester(displayNumbers.incrementAndGet()).test();
+        new XMessageTester(displayNumbers.incrementAndGet(), tmp.getRoot()).test();
     }
 
     @org.junit.Test
     public void autoDisplayNumber() throws Exception {
-        new XMessageTester().test();
+        new XMessageTester(tmp.getRoot()).test();
     }
 
     private static Rectangle parsePosition(XWindow window) {

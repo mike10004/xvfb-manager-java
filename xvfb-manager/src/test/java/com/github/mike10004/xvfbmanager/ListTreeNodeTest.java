@@ -5,11 +5,6 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-/*
- * (c) 2016 Novetta
- *
- * Created by mike
- */
 public class ListTreeNodeTest {
 
     @Test
