@@ -96,6 +96,85 @@ on Ubuntu. In theory, it should work on Fedora-like platforms. Support
 for MacOS has not been investigated. Support for Windows probably 
 wouldn't make sense.
 
+Runtime and Unit Test Requirements
+----------------------------------
+
+Many tests will be skipped if certain programs are not available in the
+build environment. They are identified below by distribution.
+
+<table>
+  <tr>
+    <td>Ubuntu 16.04</td>
+    <td>Fedora 24</td>
+    <td>Scope</td>
+  </tr>
+  <tr>
+    <td>xvfb</td>
+    <td>xorg-x11-server-Xvfb</td>
+    <td>runtime</td>
+  </tr>
+  <tr>
+    <td>netpbm</td>
+    <td>netpbm-progs</td>
+    <td>runtime</td>
+  </tr>
+  <tr>
+    <td>x11-utils</td>
+    <td>xorg-x11-utils</td>
+    <td>runtime</td>
+  </tr>
+  <tr>
+    <td>x11-apps</td>
+    <td>xorg-x11-apps</td>
+    <td>test</td>
+  </tr>
+  <tr>
+    <td>xdotool</td>
+    <td>xdotool</td>
+    <td>test</td>
+  </tr>
+  <tr>
+    <td>imagemagick</td>
+    <td>ImageMagick</td>
+    <td>test</td>
+  </tr>
+  <tr>
+    <td>firefox</td>
+    <td>firefox</td>
+    <td>test</td>
+  </tr>
+  <tr>
+    <td>google-chrome or chromium</td>
+    <td>google-chrome or chromium</td>
+    <td>test</td>
+  </tr>
+</table>
+
+### Ubuntu 16.04
+
+#### Runtime
+
+* **xvfb**
+* **x11-utils** (for `xwininfo` and `xdpyinfo`)
+
+#### Unit Test
+
+* **x11-apps** (for `xmessage`)
+* **xdotool**
+* **imagemagick**
+* **firefox**
+* **chrome** or **chromium**
+
+### Fedora 24
+
+* **xorg-x11-server-Xvfb**
+* **x11-utils** (for `xwininfo` and `xdpyinfo`)
+* **xorg-x11-apps** (for `xmessage`)
+* **xdotool**
+* **ImageMagick**
+* **firefox**
+* **chrome** or **chromium**
+
 Acknowledgements
 ----------------
 
