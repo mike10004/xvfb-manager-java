@@ -7,6 +7,8 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.novetta.ibg.common.sys.Whicher;
 import org.apache.commons.lang3.StringUtils;
 
@@ -28,13 +30,18 @@ public abstract class PackageManager {
 
     public abstract boolean queryPackageInstalled(String packageName) throws IOException;
 
-    public abstract boolean checkImageMagickInstalled() throws IOException;
+    public boolean checkImageMagickInstalled() throws IOException {
+        return isAllCommandsExecutable(getImageMagickCommands());
+    }
 
-    public abstract boolean checkAutoDisplaySupport() throws IOException;
+    public boolean checkPackageVersion(String packageName, int minimumMajor, int minimumMinor) throws IOException {
+        return checkPackageVersion(packageName, minimumMajorMinorPredicate(minimumMajor, minimumMinor));
+    }
 
-    public abstract boolean checkPackageVersion(String packageName, int minimumMajor, int minimumMinor) throws IOException;
-
-    public abstract boolean checkPackageVersion(String packageName, Predicate<String> versionPredicate) throws IOException;
+    public boolean checkPackageVersion(String packageName, Predicate<String> versionPredicate) throws IOException {
+        String version = queryPackageVersion(packageName);
+        return versionPredicate.apply(version);
+    }
 
     public abstract String queryPackageVersion(String packageName) throws IOException;
 
@@ -77,6 +84,8 @@ public abstract class PackageManager {
             Whicher whicher = Whicher.gnu();
             if (whicher.which("dpkg").isPresent()) {
                 return new DebianPackageManager();
+            } else if (whicher.which("dnf").isPresent()) {
+                return new FedoraPackageManager();
             } else {
                 Logger.getLogger(PackageManager.class.getName()).warning("operating system not fully supported; " +
                         "will not be able to determine installation status of packages");
@@ -87,6 +96,34 @@ public abstract class PackageManager {
 
     public static PackageManager getInstance() {
         return instanceSupplier.get();
+    }
+
+    private static final ImmutableSet<String> imageMagickCommands = ImmutableSet.of("mogrify", "identify", "convert");
+
+    public static Iterable<String> getImageMagickCommands() {
+        return imageMagickCommands;
+    }
+
+    public boolean checkAutoDisplaySupport() throws IOException {
+        // https://stackoverflow.com/questions/2520704/find-a-free-x11-display-number
+        return checkPackageVersion("xvfb", 1, 13);
+    }
+
+    /**
+     * Checks whether each of a list of commands has a corresponding executable
+     * on the system path with the same name.
+     * @param commands the commands
+     * @return true iff all commands have corresponding executables
+     */
+    public static boolean isAllCommandsExecutable(Iterable<String> commands) {
+        Whicher whicher = Whicher.gnu();
+        for (String prog : commands) {
+            if (!whicher.which(prog).isPresent()) {
+                return false;
+            }
+        }
+        return true;
+
     }
 
     private static class FalseyPackageManager extends PackageManager {

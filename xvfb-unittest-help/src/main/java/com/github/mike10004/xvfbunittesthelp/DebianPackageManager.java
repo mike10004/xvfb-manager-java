@@ -61,35 +61,6 @@ class DebianPackageManager extends PackageManager {
     }
 
     @Override
-    public boolean checkImageMagickInstalled() {
-        String[] progs = {"mogrify", "convert", "identify"};
-        Whicher whicher = Whicher.gnu();
-        for (String prog : progs) {
-            if (!whicher.which(prog).isPresent()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    @Override
-    public boolean checkAutoDisplaySupport() throws IOException {
-        // https://stackoverflow.com/questions/2520704/find-a-free-x11-display-number
-        return checkPackageVersion("xvfb", 1, 13);
-    }
-
-    @Override
-    public boolean checkPackageVersion(String packageName, int minimumMajor, int minimumMinor) throws IOException {
-        return checkPackageVersion(packageName, minimumMajorMinorPredicate(minimumMajor, minimumMinor));
-    }
-
-    @Override
-    public boolean checkPackageVersion(String packageName, Predicate<String> versionPredicate) throws IOException {
-        String version = queryPackageVersion(packageName);
-        return versionPredicate.apply(version);
-    }
-
-    @Override
     public String queryPackageVersion(String packageName) throws IOException {
         ProgramWithOutputStringsResult result = buildDpkgShowProgram(packageName)
                 .execute();
