@@ -150,31 +150,6 @@ build environment. They are identified below by distribution.
   </tr>
 </table>
 
-### Ubuntu 16.04
-
-#### Runtime
-
-* **xvfb**
-* **x11-utils** (for `xwininfo` and `xdpyinfo`)
-
-#### Unit Test
-
-* **x11-apps** (for `xmessage`)
-* **xdotool**
-* **imagemagick**
-* **firefox**
-* **chrome** or **chromium**
-
-### Fedora 24
-
-* **xorg-x11-server-Xvfb**
-* **x11-utils** (for `xwininfo` and `xdpyinfo`)
-* **xorg-x11-apps** (for `xmessage`)
-* **xdotool**
-* **ImageMagick**
-* **firefox**
-* **chrome** or **chromium**
-
 Acknowledgements
 ----------------
 
