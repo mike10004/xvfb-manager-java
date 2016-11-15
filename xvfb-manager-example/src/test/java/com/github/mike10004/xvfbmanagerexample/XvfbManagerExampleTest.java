@@ -70,7 +70,7 @@ public class XvfbManagerExampleTest {
 
     @org.junit.Test
     public void main_chrome() throws IOException {
-        Assumptions.assumeTrue("chrome or chromium must be installed", PackageManager.getInstance().queryAnyCommandExecutable(Arrays.asList("chromium", "google-chrome")));
+        Assumptions.assumeTrue("chrome or chromium must be installed", PackageManager.getInstance().queryAnyCommandExecutable(Arrays.asList("chromium-browser", "google-chrome")));
         runMainWithArgs("chrome");
     }
 
