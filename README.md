@@ -73,6 +73,8 @@ The purpose of each module is as follows:
 Notes
 -----
 
+### Automatic Display Selection
+
 Versions of Xvfb prior to 1.13 did not support the `-displayfd` option 
 that allows automatic selection of an open display number. If your 
 version of Xvfb is lower than 1.13, then you must specify a display 
@@ -88,6 +90,18 @@ If using the JUnit rule, then the display number is specified like this:
 The display number `99` corresponds to the `DISPLAY` environment 
 variable value `:99`.
 
+### Unit tests with Selenium
+
+The unit tests that involve Selenium make use of [WebDriverManager]
+to manage webdrivers for Chrome and Firefox. This library queries the 
+GitHub API and occasionally gets a 403 response due to [rate-limiting]
+of anonymous requests. To make your requests non-anonymous and prevent
+the rate-limiting from breaking the build:
+
+1. Create a pair token/secret in your [GitHub account]
+2. Set system properties `wdm.gitHubTokenName` and `wdm.gitHubTokenSecret`
+   for the build
+
 Supported Operating Systems
 ---------------------------
 
@@ -99,8 +113,10 @@ wouldn't make sense.
 Runtime and Unit Test Requirements
 ----------------------------------
 
-Many tests will be skipped if certain programs are not available in the
-build environment. They are identified below by distribution.
+Some programs are required to be installed at runtime, and many tests 
+will be skipped if certain programs are not available in the build 
+environment. These prerequisites are listed in the table below by 
+distribution.
 
 <table>
   <tr>
@@ -155,3 +171,7 @@ Acknowledgements
 
 The photo used in the unit tests is by George Chernilevsky - Own work, 
 CC BY-SA 4.0, https://commons.wikimedia.org/w/index.php?curid=34785750.
+
+[WebDriverManager]: https://github.com/bonigarcia/webdrivermanager
+[rate-limiting]: https://developer.github.com/v3/#rate-limiting
+[GitHub account]: https://github.com/settings/tokens

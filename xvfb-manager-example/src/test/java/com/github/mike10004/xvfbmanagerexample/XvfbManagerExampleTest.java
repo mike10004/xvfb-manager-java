@@ -36,32 +36,6 @@ public class XvfbManagerExampleTest {
         Assumptions.assumeTrue("xvfb version not high enough to test auto-display support", PackageManager.getInstance().queryAutoDisplaySupport());
     }
 
-    /**
-     * Copy GitHub API tokens from environment variables to system properties.
-     * The webdriver manager downloads some stuff through the GitHub API, which has low
-     * quotas for anonymous requests. Set the environment variables {@code GITHUB_TOKEN_NAME}
-     * and {@code GITHUB_TOKEN_SECRET} to use your personal token for these download requests.
-     * This sets the appropriate system properties (see https://github.com/bonigarcia/webdrivermanager)
-     * only if the environment variables are set and the system properties are not yet defined.
-     */
-    @Before
-    public void setGithubTokenSystemProperties() {
-        if (System.getProperty("wdm.gitHubTokenName") == null) {
-            String tokenName = System.getenv("GITHUB_TOKEN_NAME");
-            if (tokenName != null) {
-                System.setProperty("wdm.gitHubTokenName", tokenName);
-            }
-        }
-        if (System.getProperty("wdm.gitHubTokenSecret") == null) {
-            String tokenSecret = System.getenv("GITHUB_TOKEN_SECRET");
-            if (tokenSecret != null) {
-                System.setProperty("wdm.gitHubTokenSecret", tokenSecret);
-            }
-        }
-
-
-    }
-
     @org.junit.Test
     public void main_firefox() throws IOException {
         Assumptions.assumeTrue("firefox must be installed", PackageManager.getInstance().queryCommandExecutable("firefox"));
