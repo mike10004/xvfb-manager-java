@@ -54,7 +54,7 @@ public class XvfbManagerExample {
         XvfbManager xvfb = new XvfbManager();
         try (XvfbController ctrl = xvfb.start()) {
             screenshotImage = browse(browserKey, url, ctrl.getDisplay());
-        } 
+        }
         System.out.format("captured %dx%d screenshot%n", screenshotImage.getWidth(), screenshotImage.getHeight());
         ImageIO.write(screenshotImage, "png", screenshotFile);
     }
