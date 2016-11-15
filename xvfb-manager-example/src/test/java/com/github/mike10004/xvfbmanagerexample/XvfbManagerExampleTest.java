@@ -1,21 +1,32 @@
 package com.github.mike10004.xvfbmanagerexample;
 
 import com.github.mike10004.xvfbunittesthelp.PackageManager;
+import com.google.common.io.Resources;
+import com.google.common.net.HttpHeaders;
+import com.google.common.net.MediaType;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
+import org.mockserver.client.server.MockServerClient;
+import org.mockserver.junit.MockServerRule;
+import org.mockserver.model.HttpRequest;
+import org.mockserver.model.HttpResponse;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 
 public class XvfbManagerExampleTest {
 
     @Rule
     public TemporaryFolder tmp = new TemporaryFolder();
+
+    @Rule
+    public MockServerRule mockServerRule = new MockServerRule(this);
 
     @BeforeClass
     public static void checkPrequisites() throws IOException {
@@ -59,9 +70,19 @@ public class XvfbManagerExampleTest {
         runMainWithArgs("chrome");
     }
 
+    private static final String host = "localhost";
+
     private void runMainWithArgs(String browserKey) throws IOException {
+        int port = mockServerRule.getPort().intValue();
+        MockServerClient server = new MockServerClient(host, port);
+        String path = "/";
+        String html = "<html><head><title>Example</title></head><body><img src=\"cat.jpg\"></body></html>";
+        byte[] imageBytes = Resources.toByteArray(XvfbManagerExample.class.getResource("/smiling-cat-in-public-domain.jpg"));
+        server.when(HttpRequest.request(path)).respond(HttpResponse.response(html).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.HTML_UTF_8.toString()));
+        server.when(HttpRequest.request(path + "cat.jpg")).respond(HttpResponse.response().withBody(imageBytes).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.JPEG.toString()));
+        URL url = new URL("http", host, port, path);
         File screenshotFile = tmp.newFile("screenshot.png");
-        XvfbManagerExample.browseAndCaptureScreenshot(browserKey, screenshotFile);
+        XvfbManagerExample.browseAndCaptureScreenshot(browserKey, url, screenshotFile);
         BufferedImage image = ImageIO.read(screenshotFile);
         System.out.format("%dx%d screenshot saved to %s%n", image.getWidth(), image.getHeight(), screenshotFile);
     }

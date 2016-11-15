@@ -9,14 +9,8 @@ import com.github.mike10004.xvfbselenium.WebDriverSupport;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Resources;
-import com.google.common.net.HttpHeaders;
-import com.google.common.net.MediaType;
 import io.github.bonigarcia.wdm.WebDriverManager;
 import org.apache.commons.lang3.tuple.Pair;
-import org.mockserver.integration.ClientAndServer;
-import org.mockserver.model.HttpRequest;
-import org.mockserver.model.HttpResponse;
 import org.openqa.selenium.OutputType;
 import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebDriver;
@@ -31,6 +25,8 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -39,38 +35,28 @@ public class XvfbManagerExample {
     public static final String ENV_FIREFOX_BIN = "FIREFOX_BIN";
 
     public static void main(String[] args) throws IOException {
-        if (args.length < 0 || !browserMap.containsKey(args[0])) {
+        if (args.length < 3) {
+            System.err.format("Syntax:%n    chrome http://example.com screenshot.png%n    firefox http://example.com screenshot.png%nExactly 3 arguments required.%n");
+            System.exit(1);
+        }
+        String browserKey = args[0];
+        if (!browserMap.containsKey(browserKey)) {
             System.err.format("first argument must be one of {%s}%n", Joiner.on(", ").join(browserMap.keySet()));
             System.exit(1);
         }
-        if (args.length < 1) {
-            System.err.println("second argument must be screenshot output pathname");
-            System.exit(1);
-        }
-        File screenshotFile = new File(args[1]);
-        browseAndCaptureScreenshot(args[0], screenshotFile);
+        URL url = new URL(args[1]);
+        File screenshotFile = new File(args[2]);
+        browseAndCaptureScreenshot(browserKey, url, screenshotFile);
     }
 
-    public static void browseAndCaptureScreenshot(String browserKey, File screenshotFile) throws IOException {
-        ClientAndServer server = ClientAndServer.startClientAndServer(0);
-        try {
-            String host = "localhost", path = "/";
-            int port = server.getPort();
-            String html = "<html><head><title>Example</title></head><body><img src=\"cat.jpg\"></body></html>";
-            byte[] imageBytes = Resources.toByteArray(XvfbManagerExample.class.getResource("/smiling-cat-in-public-domain.jpg"));
-            server.when(HttpRequest.request(path)).respond(HttpResponse.response(html).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.HTML_UTF_8.toString()));
-            server.when(HttpRequest.request(path + "cat.jpg")).respond(HttpResponse.response().withBody(imageBytes).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.JPEG.toString()));
-            URL url = new URL("http", host, port, path);
-            BufferedImage screenshotImage;
-            XvfbManager xvfb = new XvfbManager();
-            try (XvfbController ctrl = xvfb.start()) {
-                screenshotImage = browse(browserKey, url, ctrl.getDisplay());
-            }
-            System.out.format("captured %dx%d screenshot%n", screenshotImage.getWidth(), screenshotImage.getHeight());
-            ImageIO.write(screenshotImage, "png", screenshotFile);
-        } finally {
-            server.stop();
-        }
+    public static void browseAndCaptureScreenshot(String browserKey, URL url, File screenshotFile) throws IOException {
+        BufferedImage screenshotImage;
+        XvfbManager xvfb = new XvfbManager();
+        try (XvfbController ctrl = xvfb.start()) {
+            screenshotImage = browse(browserKey, url, ctrl.getDisplay());
+        } 
+        System.out.format("captured %dx%d screenshot%n", screenshotImage.getWidth(), screenshotImage.getHeight());
+        ImageIO.write(screenshotImage, "png", screenshotFile);
     }
 
     /**
