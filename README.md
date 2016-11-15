@@ -104,9 +104,9 @@ build environment. They are identified below by distribution.
 
 <table>
   <tr>
-    <td>Ubuntu 16.04</td>
-    <td>Fedora 24</td>
-    <td>Scope</td>
+    <td><b>Ubuntu 16.04</b></td>
+    <td><b>Fedora 24</b></td>
+    <td><b>Scope</b></td>
   </tr>
   <tr>
     <td>xvfb</td>
