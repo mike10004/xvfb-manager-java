@@ -9,7 +9,7 @@ import java.io.IOException;
 
 /**
  * Interface for a class that can capture a screenshot of a virtual framebuffer.
- * <T> screenshot type
+ * @param <T> screenshot type
  */
 public interface Screenshooter<T extends Screenshot> {
     /**
@@ -21,19 +21,19 @@ public interface Screenshooter<T extends Screenshot> {
     T capture() throws IOException, XvfbException;
 
     @SuppressWarnings("unused")
-    class DefaultScreenshooterException extends XvfbException {
-        public DefaultScreenshooterException() {
+    class ScreenshooterException extends XvfbException {
+        public ScreenshooterException() {
         }
 
-        public DefaultScreenshooterException(String message) {
+        public ScreenshooterException(String message) {
             super(message);
         }
 
-        public DefaultScreenshooterException(String message, Throwable cause) {
+        public ScreenshooterException(String message, Throwable cause) {
             super(message, cause);
         }
 
-        public DefaultScreenshooterException(Throwable cause) {
+        public ScreenshooterException(Throwable cause) {
             super(cause);
         }
     }

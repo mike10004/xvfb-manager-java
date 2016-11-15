@@ -47,7 +47,6 @@ public interface XvfbController extends Closeable {
     /**
      * Captures a screenshot of the virtual framebuffer.
      * @return the screenshot
-     * @throws IOException if I/O error occurs
      * @throws XvfbException if screenshooting goes awry
      */
     Screenshooter<?> getScreenshooter() throws XvfbException;

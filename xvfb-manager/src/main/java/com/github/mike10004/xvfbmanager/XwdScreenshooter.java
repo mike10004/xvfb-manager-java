@@ -51,7 +51,7 @@ public class XwdScreenshooter implements Screenshooter<XwdFileScreenshot> {
         log.debug("xwd process finished: {}", xwdResult);
         String stderrText = StringUtils.abbreviate(xwdResult.getStderrString(), 512);
         if (xwdResult.getExitCode() != 0) {
-            throw new DefaultScreenshooterException("xwd failed with code " + xwdResult.getExitCode() + " and stderr: " + stderrText);
+            throw new ScreenshooterException("xwd failed with code " + xwdResult.getExitCode() + " and stderr: " + stderrText);
         }
         return XwdFileScreenshot.from(xwdFile);
     }
