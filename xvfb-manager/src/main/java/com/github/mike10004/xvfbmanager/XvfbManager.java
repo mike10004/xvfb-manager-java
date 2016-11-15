@@ -88,7 +88,7 @@ public class XvfbManager {
      * Creates an executor service with a 2-thread pool and thread factory that creates daemon threads.
      * @return the executor service
      */
-    protected static ExecutorService createDefaultExecutorService() {
+    public static ExecutorService createDefaultExecutorService() {
         return Executors.newFixedThreadPool(2, new ThreadFactory() {
 
             private ThreadFactory defaultThreadFactory = Executors.defaultThreadFactory();
@@ -173,19 +173,51 @@ public class XvfbManager {
         return start(displayNumber, scratchDir, createDefaultExecutorService());
     }
 
-    protected XvfbController start(int displayNumber, Path scratchDir, ExecutorService executorService) throws IOException {
+    /**
+     * Starts Xvfb on the specified display using the specified executor service, writing temp
+     * files to the specified directory.
+     * @param displayNumber the display number
+     * @param scratchDir the temp directory
+     * @param executorService the executor service
+     * @return the process controller
+     * @throws IOException if the files and directories the process requires cannot be created or written to
+     */
+    public XvfbController start(int displayNumber, Path scratchDir, ExecutorService executorService) throws IOException {
         return doStart(displayNumber, nonDeletingExistingDirectoryProvider(scratchDir), executorService);
     }
 
-    protected XvfbController start(int displayNumber, ExecutorService executorService) throws IOException {
+    /**
+     * Starts Xvfb on the specified display using the specified executor service. A directory for temp files
+     * is created and deleted when the process is stopped.
+     * @param displayNumber the display number
+     * @param executorService the executor service
+     * @return the process controller
+     * @throws IOException if the files and directories the process requires cannot be created or written to
+     */
+    public XvfbController start(int displayNumber, ExecutorService executorService) throws IOException {
         return doStart(displayNumber, newTempDirProvider(FileUtils.getTempDirectory().toPath()), executorService);
     }
 
-    protected XvfbController start(ExecutorService executorService) throws IOException {
+    /**
+     * Starts Xvfb on a vacant display using the specified executor service. A directory for temp files
+     * is created and deleted when the process is stopped.
+     * @param executorService the executor service
+     * @return the process controller
+     * @throws IOException if the files and directories the process requires cannot be created or written to
+     */
+    public XvfbController start(ExecutorService executorService) throws IOException {
         return doStart(null, newTempDirProvider(FileUtils.getTempDirectory().toPath()), executorService);
     }
 
-    protected XvfbController start(Path scratchDir, ExecutorService executorService) throws IOException {
+    /**
+     * Starts Xvfb on a vacant display using the specified executor service and writing temp files
+     * to the given directory.
+     * @param scratchDir the temp directory
+     * @param executorService the executor service
+     * @return the process controller
+     * @throws IOException if the files and directories the process requires cannot be created or written to
+     */
+    public XvfbController start(Path scratchDir, ExecutorService executorService) throws IOException {
         return doStart(null, nonDeletingExistingDirectoryProvider(scratchDir), executorService);
     }
 
