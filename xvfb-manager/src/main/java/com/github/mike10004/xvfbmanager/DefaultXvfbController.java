@@ -6,13 +6,14 @@ package com.github.mike10004.xvfbmanager;
 import com.github.mike10004.nativehelper.Program;
 import com.github.mike10004.nativehelper.ProgramWithOutputResult;
 import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
-import com.github.mike10004.xvfbmanager.Poller.StopReason;
 import com.github.mike10004.xvfbmanager.Poller.PollOutcome;
+import com.github.mike10004.xvfbmanager.Poller.StopReason;
 import com.github.mike10004.xvfbmanager.XvfbManager.Screenshot;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
@@ -24,7 +25,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
@@ -36,6 +36,12 @@ import static com.google.common.base.Preconditions.checkState;
  * the constructor.
  */
 public class DefaultXvfbController implements XvfbController {
+
+    private static final Iterable<String> requiredPrograms = Iterables.concat(XWindowPoller.getRequiredPrograms());
+
+    public static Iterable<String> getRequiredPrograms() {
+        return requiredPrograms;
+    }
 
     /**
      * Default poll interval for {@link #waitUntilReady()}}.
@@ -157,6 +163,14 @@ public class DefaultXvfbController implements XvfbController {
 
     private static class XWindowPoller extends Poller<TreeNode<XWindow>> {
 
+        private static final String PROG_XWININFO = "xwininfo";
+
+        private static final ImmutableSet<String> requiredPrograms = ImmutableSet.of(PROG_XWININFO);
+
+        public static Iterable<String> getRequiredPrograms() {
+            return requiredPrograms;
+        }
+
         private final String display;
         private final Predicate<XWindow> evaluator;
 
@@ -168,7 +182,7 @@ public class DefaultXvfbController implements XvfbController {
 
         @Override
         protected PollAnswer<TreeNode<XWindow>> check(int pollAttemptsSoFar) {
-            ProgramWithOutputStringsResult result = Program.running("xwininfo")
+            ProgramWithOutputStringsResult result = Program.running(PROG_XWININFO)
                     .args("-display", display)
                     .args("-root", "-tree")
                     .outputToStrings()

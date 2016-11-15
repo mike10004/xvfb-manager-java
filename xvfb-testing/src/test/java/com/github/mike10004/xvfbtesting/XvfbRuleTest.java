@@ -10,6 +10,8 @@ import com.github.mike10004.xvfbunittesthelp.PackageManager;
 import com.github.mike10004.xvfbmanager.TreeNode;
 import com.github.mike10004.xvfbmanager.XvfbController;
 import com.github.mike10004.xvfbmanager.XvfbController.XWindow;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -21,6 +23,7 @@ import javax.annotation.Nullable;
 import java.awt.Rectangle;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutorService;
@@ -38,13 +41,14 @@ public class XvfbRuleTest {
 
     private static final int FIRST_DISPLAY_NUMBER = 99; // if host has more displays than this number already active, problems will ensue
     private static final AtomicInteger displayNumbers = new AtomicInteger(FIRST_DISPLAY_NUMBER);
+    private static final boolean takeScreenshot = false;
 
     @BeforeClass
     public static void checkPrerequisities() throws IOException {
-        for (String packageName : new String[]{"xvfb", "x11-utils", "xdotool"}) {
-            boolean installed = PackageManager.getInstance().queryPackageInstalled(packageName);
-            System.out.format("%s installed? %s%n", packageName, installed);
-            Assume.assumeTrue(packageName + " must be installed for these tests to be executed", installed);
+        for (String program : Iterables.concat(Arrays.asList("Xvfb", "xdotool", "xmessage"), takeScreenshot ? Arrays.asList("xwdtopnm") : ImmutableList.of())) {
+            boolean installed = PackageManager.getInstance().queryCommandExecutable(program);
+            System.out.format("%s executable? %s%n", program, installed);
+            Assume.assumeTrue(program + " must be an executable program for these tests to be executed", installed);
         }
     }
 
@@ -92,8 +96,6 @@ public class XvfbRuleTest {
 
         }
     }
-
-    private static final boolean takeScreenshot = false;
 
     private static class XMessageTester extends RuleUser {
         public XMessageTester() {

@@ -20,7 +20,6 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.novetta.ibg.common.image.ImageInfo;
 import com.novetta.ibg.common.image.ImageInfos;
-import com.novetta.ibg.common.sys.Platforms;
 import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
@@ -35,6 +34,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -57,21 +57,26 @@ public class XvfbManagerTest {
     public TemporaryFolder tmp = new TemporaryFolder();
 
     @org.junit.Test
-    public void toDisplayValue() throws Exception {
+    public void toDisplayValue() {
         assertEquals("display", ":123", XvfbManager.toDisplayValue(123));
+    }
+
+    @org.junit.Test(expected=IllegalArgumentException.class)
+    public void toDisplayValue_negative() {
+        XvfbManager.toDisplayValue(-1);
     }
 
     @org.junit.BeforeClass
     public static void checkPrerequisities() throws IOException {
         PackageManager packageManager = PackageManager.getInstance();
-        for (String packageName : new String[]{"xvfb", "x11-utils", "xdotool"}) {
-            boolean installed = packageManager.queryPackageInstalled(packageName);
-            Assume.assumeTrue(packageName + " must be installed for these tests to be executed", installed);
+        for (String program : Iterables.concat(Arrays.asList("Xvfb"), DefaultXvfbController.getRequiredPrograms())) {
+            boolean installed = packageManager.queryCommandExecutable(program);
+            Assume.assumeTrue(program + " must be installed for these tests to be executed", installed);
         }
     }
     @org.junit.Test
     public void start_autoDisplay_trueColor() throws Exception {
-        Assume.assumeTrue("xvfb version not high enough to test auto-display support", PackageManager.getInstance().checkAutoDisplaySupport());
+        Assume.assumeTrue("xvfb version not high enough to test auto-display support", PackageManager.getInstance().queryAutoDisplaySupport());
         testWithConfigAndDisplay(new XvfbConfig("640x480x24"), null);
     }
 
@@ -81,7 +86,6 @@ public class XvfbManagerTest {
     }
 
     private void testWithConfigAndDisplay(XvfbConfig config, @Nullable Integer displayNumber) throws Exception {
-        Assume.assumeFalse("supported platforms are Linux and MacOS", Platforms.getPlatform().isWindows());
         Assume.assumeTrue("imagemagick must be installed", PackageManager.getInstance().checkImageMagickInstalled());
         XvfbManager instance = new XvfbManager(config) {
             @Override

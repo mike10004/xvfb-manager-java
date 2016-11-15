@@ -4,6 +4,7 @@
 package com.github.mike10004.xvfbmanager;
 
 import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
+import com.google.common.collect.ImmutableSet;
 import org.slf4j.LoggerFactory;
 
 import static com.github.mike10004.nativehelper.Program.running;
@@ -15,6 +16,14 @@ import static com.github.mike10004.nativehelper.Program.running;
  * the display is ready.
  */
 public class DefaultDisplayReadinessChecker implements XvfbManager.DisplayReadinessChecker {
+
+    private static final String PROG_XDPYINFO = "xdpyinfo";
+
+    private static final ImmutableSet<String> requiredPrograms = ImmutableSet.of(PROG_XDPYINFO);
+
+    public static Iterable<String> getRequiredPrograms() {
+        return requiredPrograms;
+    }
 
     /**
      * Checks display readiness. Executes {@code xdpyinfo} and returns true on

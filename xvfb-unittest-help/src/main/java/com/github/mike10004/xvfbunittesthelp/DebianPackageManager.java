@@ -9,12 +9,7 @@ import com.github.mike10004.nativehelper.Program;
 import com.github.mike10004.nativehelper.ProgramWithOutputStrings;
 import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
-import com.google.common.io.CharSource;
-import com.google.common.io.LineProcessor;
-import com.novetta.ibg.common.sys.Whicher;
-import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
 import java.util.List;

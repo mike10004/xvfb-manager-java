@@ -3,6 +3,7 @@
  */
 package com.github.mike10004.xvfbunittesthelp;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
@@ -12,6 +13,7 @@ import com.google.common.collect.ImmutableSet;
 import com.novetta.ibg.common.sys.Whicher;
 import org.apache.commons.lang3.StringUtils;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -25,13 +27,23 @@ public abstract class PackageManager {
 
     private static final Logger log = Logger.getLogger(PackageManager.class.getName());
 
+    private final Whicher whicher;
+
     PackageManager() {
+        whicher = Whicher.gnu();
+    }
+
+    public boolean queryCommandExecutable(String command) throws IOException {
+        Optional<File> executable = whicher.which(command);
+        return executable.isPresent();
     }
 
     public abstract boolean queryPackageInstalled(String packageName) throws IOException;
 
+    public abstract String queryPackageVersion(String packageName) throws IOException;
+
     public boolean checkImageMagickInstalled() throws IOException {
-        return isAllCommandsExecutable(getImageMagickCommands());
+        return queryCommandsExecutable(getImageMagickCommands());
     }
 
     public boolean checkPackageVersion(String packageName, int minimumMajor, int minimumMinor) throws IOException {
@@ -42,8 +54,6 @@ public abstract class PackageManager {
         String version = queryPackageVersion(packageName);
         return versionPredicate.apply(version);
     }
-
-    public abstract String queryPackageVersion(String packageName) throws IOException;
 
     protected static int[] parseMajorMinor(String version) throws IllegalArgumentException {
         Matcher m = Pattern.compile("^(?:\\d+:)?(\\d+)\\.(\\d+)(?:\\D.*)?$").matcher(version);
@@ -104,7 +114,7 @@ public abstract class PackageManager {
         return imageMagickCommands;
     }
 
-    public boolean checkAutoDisplaySupport() throws IOException {
+    public boolean queryAutoDisplaySupport() throws IOException {
         // https://stackoverflow.com/questions/2520704/find-a-free-x11-display-number
         return checkPackageVersion("xvfb", 1, 13);
     }
@@ -115,15 +125,13 @@ public abstract class PackageManager {
      * @param commands the commands
      * @return true iff all commands have corresponding executables
      */
-    public static boolean isAllCommandsExecutable(Iterable<String> commands) {
-        Whicher whicher = Whicher.gnu();
-        for (String prog : commands) {
-            if (!whicher.which(prog).isPresent()) {
+    public boolean queryCommandsExecutable(Iterable<String> commands) throws IOException {
+        for (String command : commands) {
+            if (!queryCommandExecutable(command)) {
                 return false;
             }
         }
         return true;
-
     }
 
     private static class FalseyPackageManager extends PackageManager {
@@ -139,7 +147,7 @@ public abstract class PackageManager {
         }
 
         @Override
-        public boolean checkAutoDisplaySupport() throws IOException {
+        public boolean queryAutoDisplaySupport() throws IOException {
             return false;
         }
 

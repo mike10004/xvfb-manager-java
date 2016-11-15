@@ -19,21 +19,18 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class FramebufferDirScreenshooter implements Screenshooter {
 
-    private final String display;
     private final File outputDir;
     private final File framebufferDir;
     private final int screen;
 
     /**
      * Constructs a new instance of the class.
-     * @param display the display, e.g. {@code :99}
      * @param framebufferDir the directory containing the framebuffer file
      * @param screen the screen; see {@code -screen} option in the {@code Xvfb} manual
      * @param outputDir directory to which the output file will be written
      */
-    public FramebufferDirScreenshooter(String display, File framebufferDir, int screen, File outputDir) {
+    public FramebufferDirScreenshooter(File framebufferDir, int screen, File outputDir) {
         super();
-        this.display = checkNotNull(display);
         this.outputDir = checkNotNull(outputDir);
         this.framebufferDir = checkNotNull(framebufferDir);
         this.screen = screen;
