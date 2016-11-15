@@ -43,6 +43,7 @@ public class XvfbRuleTest {
     public static void checkPrerequisities() throws IOException {
         for (String packageName : new String[]{"xvfb", "x11-utils", "xdotool"}) {
             boolean installed = PackageManager.getInstance().queryPackageInstalled(packageName);
+            System.out.format("%s installed? %s%n", packageName, installed);
             Assume.assumeTrue(packageName + " must be installed for these tests to be executed", installed);
         }
     }

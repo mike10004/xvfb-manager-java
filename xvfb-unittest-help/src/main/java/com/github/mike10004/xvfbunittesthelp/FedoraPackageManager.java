@@ -25,6 +25,7 @@ public class FedoraPackageManager extends PackageManager {
 
     private final ImmutableMap<String, String> debianToFedoraPackageMapper = ImmutableMap.<String, String>builder()
             .put("xvfb", "xorg-x11-server-Xvfb")
+            .put("x11-utils", "xorg-x11-utils")
             .build();
 
     protected Optional<String> checkInstalledPackageVersion(String packageName) throws IOException {
