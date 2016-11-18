@@ -13,6 +13,12 @@ import java.io.IOException;
 
 public class DisabledXvfbController implements XvfbController {
 
+    private static final DisabledXvfbController instance = new DisabledXvfbController();
+
+    public static DisabledXvfbController getInstance() {
+        return instance;
+    }
+
     /**
      * Returns immediately without doing anything.
      */
