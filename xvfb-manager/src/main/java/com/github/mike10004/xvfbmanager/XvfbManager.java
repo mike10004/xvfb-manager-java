@@ -58,7 +58,6 @@ public class XvfbManager {
 
     /**
      * Constructs a default instance of the class.
-     * @throws IOException if Xvfb executable cannot be resolved
      * @see #createXvfbExecutableResolver()
      */
     public XvfbManager() {
