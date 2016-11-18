@@ -3,15 +3,20 @@
  *
  * Created by mike
  */
-package com.github.mike10004.xvfbmanager;
+package com.github.mike10004.xvfbtesting;
 
+import com.github.mike10004.xvfbmanager.Screenshooter;
+import com.github.mike10004.xvfbmanager.Screenshot;
+import com.github.mike10004.xvfbmanager.TreeNode;
+import com.github.mike10004.xvfbmanager.XvfbController;
+import com.github.mike10004.xvfbmanager.XvfbException;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 
-public class DisabledXvfbController implements XvfbController {
+class DisabledXvfbController implements XvfbController {
 
     private static final DisabledXvfbController instance = new DisabledXvfbController();
 
