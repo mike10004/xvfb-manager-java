@@ -47,11 +47,7 @@ public class XvfbRule extends ExternalResource {
     }
 
     static XvfbManager createDefaultXvfbManager() {
-        try {
-            return new XvfbManager();
-        } catch (IOException e) {
-            throw new XvfbException("XvfbManager construction failed", e);
-        }
+        return new XvfbManager();
     }
 
     /**
