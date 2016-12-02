@@ -10,4 +10,4 @@ addons:
     - xdotool
     - chromium-browser
   firefox: "49.0"
-script: mvn verify -B -Dwdm.gitHubTokenName=$GITHUB_TOKEN_NAME -Dwdm.gitHubTokenSecret=$GITHUB_TOKEN_SECRET
+script: mvn verify -B -Ptravis -Dwdm.gitHubTokenName=$GITHUB_TOKEN_NAME -Dwdm.gitHubTokenSecret=$GITHUB_TOKEN_SECRET

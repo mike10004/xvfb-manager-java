@@ -19,6 +19,24 @@
         <common-helper.version>5.1.0</common-helper.version>
     </properties>
     <profiles>
+        <profile>
+            <id>travis</id>
+            <build>
+                <pluginManagement>
+                    <plugins>
+                        <plugin>
+                            <artifactId>maven-surefire-plugin</artifactId>
+                            <configuration>
+                                <systemPropertyVariables>
+                                    <XvfbManager.tests.maxReadinessPolls>24</XvfbManager.tests.maxReadinessPolls>
+                                    <XvfbManager.tests.readinessPollIntervalMs>250</XvfbManager.tests.readinessPollIntervalMs>
+                                </systemPropertyVariables>
+                            </configuration>
+                        </plugin>
+                    </plugins>
+                </pluginManagement>
+            </build>
+        </profile>
     </profiles>
     <description>Libraries for managing Xvfb virtual framebuffer processes in Java</description>
     <url>https://github.com/mike10004/xvfb-manager-java</url>

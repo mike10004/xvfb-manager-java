@@ -76,6 +76,7 @@ public class XvfbManagerTest {
             Assumptions.assumeTrue(program + " must be installed for these tests to be executed", installed);
         }
     }
+
     @org.junit.Test
     public void start_autoDisplay_trueColor() throws Exception {
         Assumptions.assumeTrue("xvfb version not high enough to test auto-display support", PackageManager.getInstance().queryAutoDisplaySupport());
@@ -108,7 +109,7 @@ public class XvfbManagerTest {
 
     private void testUsingController(XvfbController ctrl, XvfbConfig config, boolean takeScreenshots) throws InterruptedException, IOException, URISyntaxException {
         File imageFile = new File(XvfbManager.class.getResource("/example.jpg").toURI());
-        ctrl.waitUntilReady();
+        ctrl.waitUntilReady(Tests.getReadinessPollIntervalMs(), Tests.getMaxReadinessPolls());
         if (takeScreenshots) {
             System.out.println("capturing screenshot before launching x program");
             Screenshot beforeScreenshot = ctrl.getScreenshooter().capture();

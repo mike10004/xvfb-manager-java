@@ -73,7 +73,7 @@ public class XvfbRuleTest {
         }
         @Override
         protected void use(XvfbController ctrl) throws Exception {
-            ctrl.waitUntilReady();
+            ctrl.waitUntilReady(Tests.getReadinessPollIntervalMs(), Tests.getMaxReadinessPolls());
             ExecutorService executor = Executors.newFixedThreadPool(2);
             try {
                 ListenableFuture<ProgramWithOutputStringsResult> xmessageFuture = Program.running("/usr/bin/xmessage")
