@@ -1,16 +1,21 @@
 package com.github.mike10004.xvfbmanager;
 
+import com.github.mike10004.xvfbmanager.Sleeper.DefaultSleeper;
 import com.github.mike10004.xvfbmanager.XvfbController.XWindow;
 import com.github.mike10004.xvfbmanager.DefaultXvfbController.XwininfoParser;
 import com.github.mike10004.xvfbmanager.DefaultXvfbController.XwininfoXwindowParser;
+import com.github.mike10004.xvfbmanager.XvfbManager.DisplayReadinessChecker;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.CharSource;
 import com.google.common.io.Resources;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.easymock.EasyMock;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -19,8 +24,14 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.assertEquals;
 
@@ -169,4 +180,16 @@ public class DefaultXvfbControllerTest {
         out.flush();
         return sw.toString();
     }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void configureEnvironment() {
+        XvfbController ctrl = new DefaultXvfbController(EasyMock.createMock(ListenableFuture.class), ":123",
+                EasyMock.createMock(DisplayReadinessChecker.class),
+                EasyMock.createMock(Screenshooter.class),
+                EasyMock.createMock(Sleeper.class));
+        Map<String, String> env = ctrl.configureEnvironment(new HashMap<>());
+        assertEquals(ImmutableMap.of(XvfbController.ENV_DISPLAY, ":123"), env);
+    }
+
 }

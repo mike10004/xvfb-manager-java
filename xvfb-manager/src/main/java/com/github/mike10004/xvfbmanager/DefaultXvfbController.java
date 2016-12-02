@@ -20,6 +20,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -68,8 +69,8 @@ public class DefaultXvfbController implements XvfbController {
         abort = new AtomicBoolean(false);
     }
 
-    void setAbort(boolean waitable) {
-        this.abort.getAndSet(waitable);
+    void setAbort(boolean abort) {
+        this.abort.getAndSet(abort);
     }
 
     public void waitUntilReady() throws InterruptedException {
@@ -79,6 +80,12 @@ public class DefaultXvfbController implements XvfbController {
     @Override
     public String getDisplay() {
         return display;
+    }
+
+    @Override
+    public Map<String, String> configureEnvironment(Map<String, String> environment) {
+        environment.put(ENV_DISPLAY, display);
+        return environment;
     }
 
     private boolean checkAbort() {

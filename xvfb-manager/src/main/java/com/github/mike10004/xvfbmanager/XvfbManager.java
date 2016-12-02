@@ -518,7 +518,7 @@ public class XvfbManager {
             } catch (IOException e) {
                 if (directory.exists()) {
                     LoggerFactory.getLogger(DirectoryDeletingCallback.class)
-                            .info("failed to delete directory {}: {}", directory, e);
+                            .info("failed to delete directory {}: {}", directory, e.toString());
                 }
             }
         }

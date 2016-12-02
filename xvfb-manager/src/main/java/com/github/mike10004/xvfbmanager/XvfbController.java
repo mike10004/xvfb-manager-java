@@ -9,11 +9,14 @@ import com.google.common.base.Predicate;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * Interface for a class that controls a virtual framebuffer process.
  */
 public interface XvfbController extends Closeable {
+
+    String ENV_DISPLAY = "DISPLAY";
 
     /**
      * Waits until the display is ready, using default values for the polling
@@ -43,6 +46,14 @@ public interface XvfbController extends Closeable {
      * @return the display
      */
     String getDisplay();
+
+    /**
+     * Sets the display environment variable in the given environment.
+     * @param environment map of environment variables in which display is to be set
+     * @return the argument environment object
+     * @see #ENV_DISPLAY
+     */
+    Map<String, String> configureEnvironment(Map<String, String> environment);
 
     /**
      * Captures a screenshot of the virtual framebuffer.

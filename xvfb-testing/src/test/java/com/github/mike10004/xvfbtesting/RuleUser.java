@@ -36,13 +36,18 @@ abstract class RuleUser {
         // no op; override if needed
     }
 
+    protected void getControllerAndUse(XvfbRule rule) throws Exception {
+        XvfbController controller = xvfb.getController();
+        use(controller);
+    }
+
     public void test() throws Exception {
         // some comically deep nesting
         try {
             xvfb.before();
             before();
             try {
-                use(xvfb.getController());
+                getControllerAndUse(xvfb);
             } finally {
                 try {
                     after();

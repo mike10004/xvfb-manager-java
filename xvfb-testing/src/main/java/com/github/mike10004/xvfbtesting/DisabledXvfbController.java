@@ -15,6 +15,7 @@ import com.google.common.base.Predicate;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.Map;
 
 class DisabledXvfbController implements XvfbController {
 
@@ -55,6 +56,16 @@ class DisabledXvfbController implements XvfbController {
     @Override
     public @Nullable String getDisplay() {
         return null;
+    }
+
+    /**
+     * Does nothing
+     * @param environment map of environment variables
+     * @return the argument
+     */
+    @Override
+    public Map<String, String> configureEnvironment(Map<String, String> environment) {
+        return environment;
     }
 
     /**

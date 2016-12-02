@@ -36,6 +36,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static org.junit.Assert.*;
 
@@ -125,7 +126,7 @@ public class XvfbRuleTest {
 
     @org.junit.Test
     public void autoDisplayNumber() throws Exception {
-        new XMessageTester(tmp.getRoot()).test();
+        new XMessageTester(checkNotNull(tmp, "tmp is null here; very strange").getRoot()).test();
     }
 
     private static Rectangle parsePosition(XWindow window) {
