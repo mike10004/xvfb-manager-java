@@ -11,6 +11,8 @@ import com.github.mike10004.nativehelper.ProgramWithOutputResult;
 import com.github.mike10004.xvfbmanager.Poller.StopReason;
 import com.github.mike10004.xvfbmanager.Poller.PollOutcome;
 import com.google.common.base.Optional;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterables;
 import com.google.common.io.CharSource;
 import com.google.common.io.Files;
@@ -51,25 +53,24 @@ public class XvfbManager {
     private static final Logger log = LoggerFactory.getLogger(XvfbManager.class);
     private static final int SCREEN = 0;
 
-    private final File xvfbExecutable;
+    private final Supplier<File> xvfbExecutableSupplier;
     private final XvfbConfig xvfbConfig;
 
     /**
      * Constructs a default instance of the class.
-     * @throws IOException if Xvfb executable cannot be resolved
-     * @see #resolveXvfbExecutable()
+     * @see #createXvfbExecutableResolver()
      */
-    public XvfbManager() throws IOException {
-        this(resolveXvfbExecutable(), XvfbConfig.DEFAULT);
+    public XvfbManager() {
+        this(createXvfbExecutableResolver(), XvfbConfig.DEFAULT);
     }
 
     /**
      * Constructs an instance of the class with a given configuration.
      * @param xvfbConfig the configuration
-     * @throws IOException if Xvfb executable cannot be resolved
+     * @see #createXvfbExecutableResolver()
      */
-    public XvfbManager(XvfbConfig xvfbConfig) throws IOException {
-        this(resolveXvfbExecutable(), xvfbConfig);
+    public XvfbManager(XvfbConfig xvfbConfig) {
+        this(createXvfbExecutableResolver(), xvfbConfig);
     }
 
     /**
@@ -79,7 +80,17 @@ public class XvfbManager {
      * @param xvfbConfig virtual framebuffer configuration
      */
     public XvfbManager(File xvfbExecutable, XvfbConfig xvfbConfig) {
-        this.xvfbExecutable = checkNotNull(xvfbExecutable);
+        this(Suppliers.ofInstance(checkNotNull(xvfbExecutable, "xvfbExecutable must be non-null; use Supplier of null instance if null is desired")), xvfbConfig);
+    }
+
+    /**
+     * Constructs an instance of the class that will launch the given executable
+     * with the given configuration.
+     * @param xvfbExecutableSupplier supplier of the pathname of the {@code Xvfb} executable
+     * @param xvfbConfig virtual framebuffer configuration
+     */
+    public XvfbManager(Supplier<File> xvfbExecutableSupplier, XvfbConfig xvfbConfig) {
+        this.xvfbExecutableSupplier = checkNotNull(xvfbExecutableSupplier);
         this.xvfbConfig = checkNotNull(xvfbConfig);
     }
 
@@ -104,6 +115,23 @@ public class XvfbManager {
     protected static String toDisplayValue(int displayNumber) {
         checkArgument(displayNumber >= 0, "displayNumber must be nonnegative");
         return String.format(":%d", displayNumber);
+    }
+
+    /**
+     * Creates a supplier that returns a valid executable or null if none was found.
+     * @return a supplier
+     */
+    protected static Supplier<File> createXvfbExecutableResolver() {
+        return new Supplier<File>() {
+            @Override
+            public File get() {
+                try {
+                    return resolveXvfbExecutable();
+                } catch (FileNotFoundException e) {
+                    return null;
+                }
+            }
+        };
     }
 
     protected static File resolveXvfbExecutable() throws FileNotFoundException {
@@ -228,10 +256,18 @@ public class XvfbManager {
      * @return process controller
      * @throws IOException if the files and directories the process requires cannot be created or written to
      */
-    private XvfbController doStart(final @Nullable Integer displayNumber, ScratchDirProvider scratchDirProvider, ExecutorService executorService) throws IOException {
+    private XvfbController doStart(final @Nullable Integer displayNumber,
+                                   ScratchDirProvider scratchDirProvider,
+                                   ExecutorService executorService) throws IOException {
         String display = null;
         final boolean AUTO_DISPLAY = displayNumber == null;
-        Program.Builder pb = Program.running(xvfbExecutable);
+        Program.Builder pb;
+        File xvfbExecutable = xvfbExecutableSupplier.get();
+        if (xvfbExecutable == null) {
+            pb = Program.running("Xvfb");
+        } else {
+            pb = Program.running(xvfbExecutable);
+        }
         if (AUTO_DISPLAY) {
             pb.args("-displayfd", String.valueOf(extractFdReflectively(DISPLAY_RECEIVER)));
         } else {

@@ -4,7 +4,6 @@
 package com.github.mike10004.xvfbtesting;
 
 import com.github.mike10004.xvfbmanager.XvfbController;
-import com.github.mike10004.xvfbmanager.XvfbException;
 import com.github.mike10004.xvfbmanager.XvfbManager;
 import com.novetta.ibg.common.sys.Platforms;
 import org.junit.rules.ExternalResource;
@@ -47,11 +46,7 @@ public class XvfbRule extends ExternalResource {
     }
 
     static XvfbManager createDefaultXvfbManager() {
-        try {
-            return new XvfbManager();
-        } catch (IOException e) {
-            throw new XvfbException("XvfbManager construction failed", e);
-        }
+        return new XvfbManager();
     }
 
     /**
@@ -175,9 +170,13 @@ public class XvfbRule extends ExternalResource {
      * @throws IllegalStateException if controller has not been created yet
      */
     public XvfbController getController() {
-        XvfbController xvfbController_ = xvfbController;
-        checkState(xvfbController_ != null, "xvfbController not created yet; this rule is disabled or prepare()/before() method has not yet been invoked");
-        return xvfbController_;
+        if (disabled) {
+            return DisabledXvfbController.getInstance();
+        } else {
+            XvfbController xvfbController_ = xvfbController;
+            checkState(xvfbController_ != null, "xvfbController not created yet; this rule is disabled or prepare()/before() method has not yet been invoked");
+            return xvfbController_;
+        }
     }
 
 }

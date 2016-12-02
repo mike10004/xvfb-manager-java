@@ -1,6 +1,3 @@
-/*
- * (c) 2016 Mike Chaberski
- */
 package com.github.mike10004.xvfbtesting;
 
 import com.github.mike10004.nativehelper.Program;
@@ -60,57 +57,12 @@ public class XvfbRuleTest {
         }
     }
 
-    private static abstract class RuleUser {
-
-        private final XvfbRule xvfb;
-
-        public RuleUser(@Nullable Integer displayNumber) {
-            if (displayNumber == null) {
-                xvfb = new XvfbRule();
-            } else {
-                xvfb = XvfbRule.builder().onDisplay(displayNumber.intValue()).build();
-            }
-        }
-
-        protected abstract void use(XvfbController ctrl) throws Exception;
-
-        protected void before() throws Exception {
-            // no op; override if needed
-        }
-
-        protected void after() throws Exception {
-            // no op; override if needed
-        }
-
-        public void test() throws Exception {
-            // some comically deep nesting
-            try {
-                xvfb.before();
-                before();
-                try {
-                    use(xvfb.getController());
-                } finally {
-                    try {
-                        after();
-                    } finally {
-                        xvfb.after();
-                    }
-                }
-            } catch (Exception e) {
-                throw e;
-            } catch (Throwable throwable) {
-                throw new IllegalStateException(throwable);
-            }
-
-        }
-    }
-
     private static class XMessageTester extends RuleUser {
 
         private final File tempDir;
 
         public XMessageTester(File tempDir) {
-            super(null);
+            super((Integer)null);
             this.tempDir = tempDir;
         }
 

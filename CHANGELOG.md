@@ -1,6 +1,11 @@
 Changelog
 =========
 
+0.3
+---
+
+* fix support for disabling manager/controller on Windows
+
 0.2
 ---
 
