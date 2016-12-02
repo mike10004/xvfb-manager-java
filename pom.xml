@@ -30,6 +30,7 @@
                                 <systemPropertyVariables>
                                     <XvfbManager.tests.maxReadinessPolls>24</XvfbManager.tests.maxReadinessPolls>
                                     <XvfbManager.tests.readinessPollIntervalMs>250</XvfbManager.tests.readinessPollIntervalMs>
+                                    <XvfbManager.tests.diagnostic.enabled>true</XvfbManager.tests.diagnostic.enabled>
                                 </systemPropertyVariables>
                             </configuration>
                         </plugin>

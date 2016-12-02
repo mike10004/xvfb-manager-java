@@ -11,6 +11,7 @@ import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
 import com.github.mike10004.xvfbmanager.XvfbController.XWindow;
 import com.github.mike10004.xvfbunittesthelp.Assumptions;
 import com.github.mike10004.xvfbunittesthelp.PackageManager;
+import com.github.mike10004.xvfbunittesthelp.XDiagnosticRule;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
@@ -52,6 +53,9 @@ import static org.junit.Assert.assertTrue;
 public class XvfbManagerTest {
 
     private static final int PRESUMABLY_VACANT_DISPLAY_NUM = 99;
+
+    @Rule
+    public XDiagnosticRule diagnostic = Tests.isDiagnosticEnabled() ? new XDiagnosticRule() : XDiagnosticRule.getDisabledInstance();
 
     @Rule
     public TemporaryFolder tmp = new TemporaryFolder();

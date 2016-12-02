@@ -7,6 +7,8 @@ import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
 import com.google.common.collect.ImmutableSet;
 import org.slf4j.LoggerFactory;
 
+import java.util.regex.Pattern;
+
 import static com.github.mike10004.nativehelper.Program.running;
 
 /**
@@ -38,7 +40,19 @@ public class DefaultDisplayReadinessChecker implements XvfbManager.DisplayReadin
                 .outputToStrings()
                 .execute();
         executedCheckProgram(result);
-        return result.getExitCode() == 0;
+        return representsReady(result, display);
+    }
+
+    protected boolean representsReady(ProgramWithOutputStringsResult result, String requiredDisplay) {
+        if (result.getExitCode() != 0) {
+            return false;
+        }
+        return isCorrectOutputForDisplay(result.getStdoutString(), requiredDisplay);
+    }
+
+    protected static boolean isCorrectOutputForDisplay(String stdout, String requiredDisplay) {
+        Pattern pattern = Pattern.compile("^name of display:\\s+" + Pattern.quote(requiredDisplay) + "$", Pattern.MULTILINE);
+        return pattern.matcher(stdout).find();
     }
 
     protected void executedCheckProgram(ProgramWithOutputStringsResult result) {

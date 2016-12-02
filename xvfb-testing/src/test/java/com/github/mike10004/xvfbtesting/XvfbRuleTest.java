@@ -71,6 +71,7 @@ public class XvfbRuleTest {
             super(displayNumber);
             this.tempDir = tempDir;
         }
+
         @Override
         protected void use(XvfbController ctrl) throws Exception {
             ctrl.waitUntilReady(Tests.getReadinessPollIntervalMs(), Tests.getMaxReadinessPolls());
