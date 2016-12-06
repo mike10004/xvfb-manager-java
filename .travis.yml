@@ -12,7 +12,7 @@ addons:
   firefox: "49.0"
 before_install:
   - sed -i.bak -e 's|https://nexus.codehaus.org/snapshots/|https://oss.sonatype.org/content/repositories/codehaus-snapshots/|g' ~/.m2/settings.xml
-install: mvn dependency:resolve
+install: mvn compile test-compile
 before_script:
   - find /tmp -maxdepth 1 -iname ".X*"
 script: mvn install -B -Ptravis -Dwdm.gitHubTokenName=$GITHUB_TOKEN_NAME -Dwdm.gitHubTokenSecret=$GITHUB_TOKEN_SECRET
