@@ -45,6 +45,7 @@ public class XvfbManagerExampleTest {
     @org.junit.Test
     public void main_firefox() throws Exception {
         Assumptions.assumeTrue("firefox must be installed", PackageManager.getInstance().queryCommandExecutable("firefox"));
+        Assumptions.assumeTrue("xvfb version not high enough to test firefox browsing", PackageManager.getInstance().checkPackageVersion("xvfb", 1, 18));
         runMainWithArgs("firefox");
     }
 
