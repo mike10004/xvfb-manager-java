@@ -10,9 +10,8 @@ addons:
     - chromium-browser
   firefox: "49.0"
 before_install:
-  - dpkg-query -l xvfb
-  - pgrep Xvfb | xargs -r ps u --pid | cat
-  - find /tmp -maxdepth 1 -iname ".X*"
+  - dpkg-query -l xvfb xdotool chromium-browser imagemagick
+  - cat ~/.m2/settings.xml
 install: mvn compile test-compile
 before_script:
   - find /tmp -maxdepth 1 -iname ".X*"
