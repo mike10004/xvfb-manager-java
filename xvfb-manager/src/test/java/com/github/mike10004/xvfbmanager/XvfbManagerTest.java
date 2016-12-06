@@ -36,6 +36,7 @@ import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -62,18 +63,20 @@ public class XvfbManagerTest {
 
     @org.junit.Test
     public void toDisplayValue() {
+        System.out.println("\ntoDisplayValue\n");
         assertEquals("display", ":123", XvfbManager.toDisplayValue(123));
     }
 
     @org.junit.Test(expected=IllegalArgumentException.class)
     public void toDisplayValue_negative() {
+        System.out.println("\ntoDisplayValue_negative\n");
         XvfbManager.toDisplayValue(-1);
     }
 
     @org.junit.BeforeClass
     public static void checkPrerequisities() throws IOException {
         PackageManager packageManager = PackageManager.getInstance();
-        Iterable<String> requiredExecutables = Iterables.concat(Arrays.asList("Xvfb"),
+        Iterable<String> requiredExecutables = Iterables.concat(Collections.singletonList("Xvfb"),
                 DefaultXvfbController.getRequiredPrograms());
         for (String program : requiredExecutables) {
             boolean installed = packageManager.queryCommandExecutable(program);
@@ -81,14 +84,30 @@ public class XvfbManagerTest {
         }
     }
 
+    @org.junit.BeforeClass
+    public static void checkPnmSupport() throws Exception {
+        Set<String> readerlessFormats = new HashSet<>();
+        for (String formatName : new String[]{"PNM", "PPM", "PGM"}) {
+            List<ImageReader> readers = ImmutableList.copyOf(ImageIO.getImageReadersByFormatName(formatName));
+            if (readers.isEmpty()) {
+                readerlessFormats.add(formatName);
+            }
+        }
+        checkState(readerlessFormats.isEmpty(), "empty readers list for %s", readerlessFormats);
+    }
+
     @org.junit.Test
     public void start_autoDisplay_trueColor() throws Exception {
+        System.out.println("\nstart_autoDisplay_trueColor\n");
         Assumptions.assumeTrue("xvfb version not high enough to test auto-display support", PackageManager.getInstance().queryAutoDisplaySupport());
         testWithConfigAndDisplay(new XvfbConfig("640x480x24"), null);
     }
 
     @org.junit.Test
     public void start_specifiedDisplay_trueColor() throws Exception {
+        System.out.println("\nstart_specifiedDisplay_trueColor\n");
+        File lockFile = XLockFileUtility.getInstance().constructLockFilePathname(":" + PRESUMABLY_VACANT_DISPLAY_NUM);
+        checkState(!lockFile.exists(), "lock file already exists: %s", lockFile);
         testWithConfigAndDisplay(new XvfbConfig("640x480x24"), PRESUMABLY_VACANT_DISPLAY_NUM);
     }
 
@@ -222,18 +241,6 @@ public class XvfbManagerTest {
                 return color.equals(input.getColor());
             }
         };
-    }
-
-    @org.junit.BeforeClass
-    public static void checkPnmSupport() throws Exception {
-        Set<String> readerlessFormats = new HashSet<>();
-        for (String formatName : new String[]{"PNM", "PPM", "PGM"}) {
-            List<ImageReader> readers = ImmutableList.copyOf(ImageIO.getImageReadersByFormatName(formatName));
-            if (readers.isEmpty()) {
-                readerlessFormats.add(formatName);
-            }
-        }
-        checkState(readerlessFormats.isEmpty(), "empty readers list for %s", readerlessFormats);
     }
 
 }

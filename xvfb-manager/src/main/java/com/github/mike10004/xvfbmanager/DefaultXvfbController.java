@@ -139,10 +139,8 @@ public class DefaultXvfbController implements XvfbController {
                 ProgramWithOutputResult result = xvfbFuture.get();
                 String message = formatXvfbExitedMessage(result);
                 log.error(message);
-            } catch (ExecutionException e) {
+            } catch (ExecutionException | InterruptedException e) {
                 throw new IllegalStateException("Future.get() should return immediately if Future.isDone() is true", e);
-            } catch (InterruptedException e) {
-                throw new IllegalStateException(e);
             }
             return true;
         } else {
