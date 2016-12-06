@@ -53,7 +53,7 @@ import static org.junit.Assert.assertTrue;
 
 public class XvfbManagerTest {
 
-    private static final int PRESUMABLY_VACANT_DISPLAY_NUM = 99;
+    private static final int PRESUMABLY_VACANT_DISPLAY_NUM = 88;
 
     @Rule
     public XDiagnosticRule diagnostic = Tests.isDiagnosticEnabled() ? new XDiagnosticRule() : XDiagnosticRule.getDisabledInstance();
@@ -94,6 +94,14 @@ public class XvfbManagerTest {
             }
         }
         checkState(readerlessFormats.isEmpty(), "empty readers list for %s", readerlessFormats);
+    }
+
+    @org.junit.AfterClass
+    public static void checkLockFileAfterTests() throws Exception {
+        File lockFile = XLockFileUtility.getInstance().constructLockFilePathname(":" + PRESUMABLY_VACANT_DISPLAY_NUM);
+        if (lockFile.exists()) {
+            System.out.format("WARNING: lock file exists after tests finished: %s%n", lockFile);
+        }
     }
 
     @org.junit.Test
