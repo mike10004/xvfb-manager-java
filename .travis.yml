@@ -5,12 +5,13 @@ language: java
 addons:
   apt:
     packages:
-    - xvfb
     - imagemagick
     - xdotool
     - chromium-browser
   firefox: "49.0"
 before_install:
+  - dpkg-query -l xvfb
+  - ps u --pid $(pgrep Xvfb)
   - find /tmp -maxdepth 1 -iname ".X*"
 install: mvn compile test-compile
 before_script:
