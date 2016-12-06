@@ -43,20 +43,20 @@ public class XvfbManagerExampleTest {
     }
 
     @org.junit.Test
-    public void main_firefox() throws IOException {
+    public void main_firefox() throws Exception {
         Assumptions.assumeTrue("firefox must be installed", PackageManager.getInstance().queryCommandExecutable("firefox"));
         runMainWithArgs("firefox");
     }
 
     @org.junit.Test
-    public void main_chrome() throws IOException {
+    public void main_chrome() throws Exception {
         Assumptions.assumeTrue("chrome or chromium must be installed", PackageManager.getInstance().queryAnyCommandExecutable(Arrays.asList("chromium-browser", "google-chrome")));
         runMainWithArgs("chrome");
     }
 
     private static final String host = "localhost";
 
-    private void runMainWithArgs(String browserKey) throws IOException {
+    private void runMainWithArgs(String browserKey) throws IOException, InterruptedException {
         int port = mockServerRule.getPort().intValue();
         MockServerClient server = new MockServerClient(host, port);
         String path = "/";
