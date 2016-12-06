@@ -49,7 +49,7 @@ public class XDiagnosticRule extends ExternalResource {
         if (disabled) {
             return;
         }
-        printDotXFiles();
+        printDotXFiles("before");
     }
 
     @Override
@@ -57,7 +57,7 @@ public class XDiagnosticRule extends ExternalResource {
         if (disabled) {
             return;
         }
-        printDotXFiles();
+        printDotXFiles("after");
     }
 
     protected Set<Path> getDirectories() {
@@ -67,9 +67,9 @@ public class XDiagnosticRule extends ExternalResource {
         return directories;
     }
 
-    protected void printDotXFiles() {
+    protected void printDotXFiles(String label) {
         Set<Path> directories_ = getDirectories();
-        out.format("XDiagnosticRule: printing .X files from %d temp-like directories%n", directories_.size());
+        out.format("%-10s XDiagnosticRule: printing .X files from %d temp-like directories%n", label, directories_.size());
         int n = 0;
         for (Path directory : directories_) {
             List<Path> files;
@@ -85,7 +85,7 @@ public class XDiagnosticRule extends ExternalResource {
                 out.format("  %s%n", file);
             }
         }
-        out.format("XDiagnosticRule: finished printing %d files from %d directories%n", n, directories_.size());
+        out.format("%-10s XDiagnosticRule: finished printing %d files from %d directories%n", label, n, directories_.size());
     }
 
 

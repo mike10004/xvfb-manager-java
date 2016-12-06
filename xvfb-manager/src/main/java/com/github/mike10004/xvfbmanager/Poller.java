@@ -8,6 +8,9 @@ import com.google.common.base.Supplier;
 
 import javax.annotation.Nullable;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
 import java.util.Iterator;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -90,6 +93,7 @@ public abstract class Poller<T> {
      * @throws InterruptedException if waiting is interrupted
      */
     public PollOutcome<T> poll(Iterator<Long> intervalsMs) throws InterruptedException {
+        long startTime = System.currentTimeMillis();
         int numPreviousPollAttempts = 0;
         PollAnswer<T> evaluation = null;
         boolean timeout;
@@ -100,12 +104,13 @@ public abstract class Poller<T> {
             long intervalMs = checkNotNull(intervalsMs.next(), "interval iterator must return non-nulls").longValue();
             checkArgument(intervalMs > 0, "intervals iterator must return positive values; got %s", intervalMs);
             evaluation = checkAndForceNotNull(numPreviousPollAttempts);
+            numPreviousPollAttempts++;
             if (evaluation.action != PollAction.CONTINUE) {
                 break;
             }
             sleeper.sleep(intervalMs);
-            numPreviousPollAttempts++;
         }
+        long finishTime = System.currentTimeMillis();
         final StopReason pollResult;
         if (timeout) {
             pollResult = StopReason.TIMEOUT;
@@ -116,7 +121,8 @@ public abstract class Poller<T> {
         } else {
             throw new IllegalStateException("bug: unexpected combination of timeoutedness and StopReason == " + evaluation.action);
         }
-        return new PollOutcome<>(pollResult, maybeGetContent(evaluation));
+        Duration duration = Duration.of(finishTime - startTime, ChronoUnit.MILLIS);
+        return new PollOutcome<>(pollResult, maybeGetContent(evaluation), duration, numPreviousPollAttempts);
     }
 
     private PollAnswer<T> checkAndForceNotNull(int numPreviousPollAttempts) {
@@ -197,9 +203,18 @@ public abstract class Poller<T> {
          */
         public final @Nullable E content;
 
-        private PollOutcome(StopReason reason, @Nullable E content) {
+        /**
+         * Gets the polling duration. This may not be exact.
+         */
+        public final Duration duration;
+
+        private final int numAttempts;
+
+        private PollOutcome(StopReason reason, @Nullable E content, Duration duration, int numAttempts) {
             this.reason = checkNotNull(reason);
             this.content = content;
+            this.duration = checkNotNull(duration);
+            this.numAttempts = numAttempts;
         }
 
         @Override
@@ -207,7 +222,40 @@ public abstract class Poller<T> {
             return "PollOutcome{" +
                     "reason=" + reason +
                     ", content=" + content +
+                    ", duration=" + duration +
+                    ", attempts=" + numAttempts +
                     '}';
+        }
+
+        /**
+         * Gets the number of times the poll was attempted. This is the numbef of
+         * times the {@link #check(int) check()} function is invoked.
+         * @return count of attempts
+         */
+        public int getNumAttempts() {
+            return numAttempts;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            PollOutcome<?> that = (PollOutcome<?>) o;
+
+            if (numAttempts != that.numAttempts) return false;
+            if (reason != that.reason) return false;
+            if (content != null ? !content.equals(that.content) : that.content != null) return false;
+            return duration.equals(that.duration);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = reason.hashCode();
+            result = 31 * result + (content != null ? content.hashCode() : 0);
+            result = 31 * result + duration.hashCode();
+            result = 31 * result + numAttempts;
+            return result;
         }
     }
 

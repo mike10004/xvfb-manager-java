@@ -19,6 +19,7 @@ import com.google.common.io.LineProcessor;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -53,20 +54,34 @@ public class DefaultXvfbController implements XvfbController {
      */
     public static final int DEFAULT_MAX_NUM_POLLS = 8;
 
+    protected static final long LOCK_FILE_CLEANUP_POLL_INTERVAL_MS = 100;
+    protected static final long LOCK_FILE_CLEANUP_TIMEOUT_MS = 500;
+
     private final ListenableFuture<? extends ProgramWithOutputResult> xvfbFuture;
     private final String display;
     private final XvfbManager.DisplayReadinessChecker displayReadinessChecker;
+    private final XLockFileChecker lockFileChecker;
     private final Screenshooter<?> screenshooter;
     private final Sleeper sleeper;
     private final AtomicBoolean abort;
 
-    public DefaultXvfbController(ListenableFuture<? extends ProgramWithOutputResult> xvfbFuture, String display, XvfbManager.DisplayReadinessChecker displayReadinessChecker, Screenshooter<?> screenshooter, Sleeper sleeper) {
+    public DefaultXvfbController(ListenableFuture<? extends ProgramWithOutputResult> xvfbFuture, String display,
+                                 XvfbManager.DisplayReadinessChecker displayReadinessChecker,
+                                 Screenshooter<?> screenshooter, Sleeper sleeper) {
+        this(xvfbFuture, display, displayReadinessChecker, screenshooter, sleeper, new PollingXLockFileChecker(LOCK_FILE_CLEANUP_POLL_INTERVAL_MS, sleeper));
+    }
+
+    @VisibleForTesting
+    protected DefaultXvfbController(ListenableFuture<? extends ProgramWithOutputResult> xvfbFuture, String display,
+                                    XvfbManager.DisplayReadinessChecker displayReadinessChecker,
+                                    Screenshooter<?> screenshooter, Sleeper sleeper, XLockFileChecker lockFileChecker) {
         this.xvfbFuture = checkNotNull(xvfbFuture);
         this.display = checkNotNull(display);
         this.displayReadinessChecker = checkNotNull(displayReadinessChecker);
         this.screenshooter = checkNotNull(screenshooter);
         this.sleeper = checkNotNull(sleeper);
         abort = new AtomicBoolean(false);
+        this.lockFileChecker = checkNotNull(lockFileChecker);
     }
 
     void setAbort(boolean abort) {
@@ -113,7 +128,41 @@ public class DefaultXvfbController implements XvfbController {
     public void stop() {
         if (!xvfbFuture.isDone()) {
             xvfbFuture.cancel(true);
+            waitForXLockFileCleanup();
         }
+    }
+
+    protected interface XLockFileChecker {
+        void waitForCleanup(String display, long timeoutMs) throws LockFileCheckingException;
+
+        @SuppressWarnings("unused")
+        class LockFileCheckingException extends XvfbException {
+            public LockFileCheckingException() {
+            }
+
+            public LockFileCheckingException(String message) {
+                super(message);
+            }
+
+            public LockFileCheckingException(String message, Throwable cause) {
+                super(message, cause);
+            }
+
+            public LockFileCheckingException(Throwable cause) {
+                super(cause);
+            }
+        }
+
+        @SuppressWarnings("unused")
+        class LockFileCleanupTimeoutException extends LockFileCheckingException {
+            public LockFileCleanupTimeoutException(String message) {
+                super(message);
+            }
+        }
+    }
+
+    protected void waitForXLockFileCleanup() {
+        lockFileChecker.waitForCleanup(display, LOCK_FILE_CLEANUP_TIMEOUT_MS);
     }
 
     @Override
