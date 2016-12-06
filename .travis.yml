@@ -10,7 +10,7 @@ addons:
     - chromium-browser
   firefox: "49.0"
 before_install:
-  - dpkg-query -l xvfb xdotool chromium-browser imagemagick
+  - dpkg-query -l xvfb chromium-browser imagemagick
   - cat ~/.m2/settings.xml
 install: mvn compile test-compile
 before_script:
