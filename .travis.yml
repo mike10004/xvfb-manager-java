@@ -11,7 +11,7 @@ addons:
   firefox: "49.0"
 before_install:
   - dpkg-query -l xvfb
-  - ps u --pid $(pgrep Xvfb)
+  - pgrep Xvfb | xargs -r ps u --pid | cat
   - find /tmp -maxdepth 1 -iname ".X*"
 install: mvn compile test-compile
 before_script:
