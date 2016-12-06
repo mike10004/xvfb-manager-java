@@ -17,6 +17,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -39,6 +41,8 @@ import static com.google.common.base.Preconditions.checkState;
  * the constructor.
  */
 public class DefaultXvfbController implements XvfbController {
+
+    private static final Logger log = LoggerFactory.getLogger(DefaultXvfbController.class);
 
     private static final Iterable<String> requiredPrograms = Iterables.concat(XWindowPoller.getRequiredPrograms());
 
@@ -109,30 +113,50 @@ public class DefaultXvfbController implements XvfbController {
         return abort.get();
     }
 
-    public void waitUntilReady(long pollIntervalMs, int maxNumPolls) throws InterruptedException {
+    private void checkXvfbNotDone() {
+
+    }
+
+    private String formatXvfbExitedMessage(ProgramWithOutputResult result) {
+        String info = null;
+        if (result.getExitCode() != 0) {
+            if (result instanceof ProgramWithOutputStringsResult) {
+                info = ((ProgramWithOutputStringsResult)result).getStderrString();
+            } else {
+                try {
+                    info = result.getStderr().asCharSource(Charset.defaultCharset()).read();
+                } catch (IOException e) {
+                    info = result.toString();
+                }
+            }
+        }
+        return "xvfb already exited with code " + result.getExitCode() + (info == null ? "" : ": " + info);
+    }
+
+    private boolean isXvfbAlreadyDone() {
         if (xvfbFuture.isDone()) {
             try {
                 ProgramWithOutputResult result = xvfbFuture.get();
-                String info = null;
-                if (result.getExitCode() != 0) {
-                    if (result instanceof ProgramWithOutputStringsResult) {
-                        info = ((ProgramWithOutputStringsResult)result).getStderrString();
-                    } else {
-                        try {
-                            info = result.getStderr().asCharSource(Charset.defaultCharset()).read();
-                        } catch (IOException e) {
-                            info = result.toString();
-                        }
-                    }
-                }
-                throw new XvfbException("xvfb already exited with code " + result.getExitCode() + (info == null ? "" : ": " + info));
+                String message = formatXvfbExitedMessage(result);
+                log.error(message);
             } catch (ExecutionException e) {
-                throw new IllegalStateException("Future.get() should return immediately if Future.isDone() is true");
+                throw new IllegalStateException("Future.get() should return immediately if Future.isDone() is true", e);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException(e);
             }
+            return true;
+        } else {
+            return false;
         }
+    }
+
+    public void waitUntilReady(long pollIntervalMs, int maxNumPolls) throws InterruptedException {
         PollOutcome<Boolean> pollResult = new Poller<Boolean>(sleeper) {
             @Override
             protected PollAnswer<Boolean> check(int pollAttemptsSoFar) {
+                if (isXvfbAlreadyDone()) {
+                    return abortPolling();
+                }
                 if (checkAbort()) {
                     return abortPolling();
                 }
