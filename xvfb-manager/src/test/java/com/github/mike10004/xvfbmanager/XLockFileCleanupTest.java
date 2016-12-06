@@ -37,7 +37,7 @@ public class XLockFileCleanupTest {
 
     @Test
     public void checkLockFileDeleted_specifiedDisplay() throws Exception {
-        int displayNum = 57;
+        final int displayNum = 57;
         checkLockFileDeleted(m -> {
             try {
                 return m.start(displayNum);

@@ -9,77 +9,34 @@ import com.github.mike10004.xvfbmanager.Poller.PollOutcome;
 import com.github.mike10004.xvfbmanager.Poller.StopReason;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.primitives.Ints;
-import org.apache.commons.io.FileUtils;
 
-import javax.annotation.Nullable;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.function.Function;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 public class PollingXLockFileChecker implements DefaultXvfbController.XLockFileChecker {
 
     private final long pollIntervalMs;
     private final Sleeper sleeper;
-    private final Function<String, String> environment;
+    private final XLockFileUtility lockFileUtility;
 
     public PollingXLockFileChecker(long pollIntervalMs, Sleeper sleeper) {
-        this(pollIntervalMs, sleeper, systemEnvironment);
+        this(pollIntervalMs, sleeper, XLockFileUtility.getInstance());
     }
-
-    private static final Function<String, String> systemEnvironment = new Function<String, String>() {
-        @Override
-        public @Nullable String apply(String name) {
-            return System.getenv(name);
-        }
-    };
 
     @VisibleForTesting
-    PollingXLockFileChecker(long pollIntervalMs, Sleeper sleeper, Function<String, String> environment) {
+    PollingXLockFileChecker(long pollIntervalMs, Sleeper sleeper, XLockFileUtility lockFileUtility) {
         this.pollIntervalMs = pollIntervalMs;
         this.sleeper = sleeper;
-        this.environment = environment;
-    }
-
-    protected File constructLockFilePathname(String display) throws IOException {
-        checkArgument(display.matches(":\\d+"), "invalid display: '%s' (expected format ':N')", display);
-        int displayNum = Integer.parseInt(display.substring(1));
-        String filename = constructLockFilename(displayNum);
-        File parent = getXLockFileParentPath();
-        return new File(parent, filename);
-    }
-
-    private static final String[] tmpdirEnvironmentVariableNames = {"TMP", "TMPDIR", "TEMP"};
-
-    /**
-     * Tries to return the host temporary directory in which the X lock file would be stored.
-     * This may be different from the value of system property {@code java.io.tmpdir}.
-     * @return the directory pathname
-     * @throws FileNotFoundException on unexpected state
-     */
-    protected File getXLockFileParentPath() throws FileNotFoundException {
-        String path = "/tmp";
-        for (String envVarName : tmpdirEnvironmentVariableNames) {
-            String envVarValue = environment.apply(envVarName);
-            if (envVarValue != null) {
-                return new File(envVarValue);
-            }
-        }
-        File dir = new File(path);
-        return dir.isDirectory() ? dir : FileUtils.getTempDirectory();
-    }
-
-    protected String constructLockFilename(int displayNum) {
-        return ".X" + displayNum + "-lock";
+        this.lockFileUtility = checkNotNull(lockFileUtility);
     }
 
     @Override
     public void waitForCleanup(String display, long timeoutMs) throws LockFileCheckingException {
         File lockFile;
         try {
-            lockFile = constructLockFilePathname(display);
+            lockFile = lockFileUtility.constructLockFilePathname(display);
         } catch (IOException e) {
             throw new LockFileCheckingException(e);
         }

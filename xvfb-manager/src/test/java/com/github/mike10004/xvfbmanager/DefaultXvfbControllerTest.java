@@ -1,5 +1,6 @@
 package com.github.mike10004.xvfbmanager;
 
+import com.github.mike10004.xvfbmanager.DefaultXvfbController.XLockFileChecker;
 import com.github.mike10004.xvfbmanager.Sleeper.DefaultSleeper;
 import com.github.mike10004.xvfbmanager.XvfbController.XWindow;
 import com.github.mike10004.xvfbmanager.DefaultXvfbController.XwininfoParser;
@@ -187,7 +188,8 @@ public class DefaultXvfbControllerTest {
         XvfbController ctrl = new DefaultXvfbController(EasyMock.createMock(ListenableFuture.class), ":123",
                 EasyMock.createMock(DisplayReadinessChecker.class),
                 EasyMock.createMock(Screenshooter.class),
-                EasyMock.createMock(Sleeper.class));
+                EasyMock.createMock(Sleeper.class),
+                EasyMock.createMock(XLockFileChecker.class));
         Map<String, String> env = ctrl.configureEnvironment(new HashMap<>());
         assertEquals(ImmutableMap.of(XvfbController.ENV_DISPLAY, ":123"), env);
     }

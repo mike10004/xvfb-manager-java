@@ -21,7 +21,9 @@ import com.google.common.util.concurrent.ListenableFuture;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -108,6 +110,26 @@ public class DefaultXvfbController implements XvfbController {
     }
 
     public void waitUntilReady(long pollIntervalMs, int maxNumPolls) throws InterruptedException {
+        if (xvfbFuture.isDone()) {
+            try {
+                ProgramWithOutputResult result = xvfbFuture.get();
+                String info = null;
+                if (result.getExitCode() != 0) {
+                    if (result instanceof ProgramWithOutputStringsResult) {
+                        info = ((ProgramWithOutputStringsResult)result).getStderrString();
+                    } else {
+                        try {
+                            info = result.getStderr().asCharSource(Charset.defaultCharset()).read();
+                        } catch (IOException e) {
+                            info = result.toString();
+                        }
+                    }
+                }
+                throw new XvfbException("xvfb already exited with code " + result.getExitCode() + (info == null ? "" : ": " + info));
+            } catch (ExecutionException e) {
+                throw new IllegalStateException("Future.get() should return immediately if Future.isDone() is true");
+            }
+        }
         PollOutcome<Boolean> pollResult = new Poller<Boolean>(sleeper) {
             @Override
             protected PollAnswer<Boolean> check(int pollAttemptsSoFar) {
