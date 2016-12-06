@@ -42,7 +42,7 @@ import static org.junit.Assert.*;
 
 public class XvfbRuleTest {
 
-    private static final int FIRST_DISPLAY_NUMBER = 99; // if host has more displays than this number already active, problems will ensue
+    private static final int FIRST_DISPLAY_NUMBER = 101; // if host has more displays than this number already active, problems will ensue
     private static final AtomicInteger displayNumbers = new AtomicInteger(FIRST_DISPLAY_NUMBER);
     private static final boolean takeScreenshot = false;
 

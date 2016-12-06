@@ -34,7 +34,7 @@ public class XvfbManagerExample {
 
     public static final String ENV_FIREFOX_BIN = "FIREFOX_BIN";
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         if (args.length < 3) {
             System.err.format("Syntax:%n    chrome http://example.com screenshot.png%n    firefox http://example.com screenshot.png%nExactly 3 arguments required.%n");
             System.exit(1);
@@ -49,10 +49,11 @@ public class XvfbManagerExample {
         browseAndCaptureScreenshot(browserKey, url, screenshotFile);
     }
 
-    public static void browseAndCaptureScreenshot(String browserKey, URL url, File screenshotFile) throws IOException {
+    public static void browseAndCaptureScreenshot(String browserKey, URL url, File screenshotFile) throws IOException, InterruptedException {
         BufferedImage screenshotImage;
         XvfbManager xvfb = new XvfbManager();
         try (XvfbController ctrl = xvfb.start()) {
+            ctrl.waitUntilReady();
             screenshotImage = browse(browserKey, url, ctrl.getDisplay());
         }
         System.out.format("captured %dx%d screenshot%n", screenshotImage.getWidth(), screenshotImage.getHeight());
