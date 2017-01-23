@@ -68,6 +68,11 @@ class DisabledXvfbController implements XvfbController {
         return environment;
     }
 
+    @Override
+    public Map<String, String> newEnvironment() {
+        return configureEnvironment(new java.util.HashMap<>());
+    }
+
     /**
      * Gets a screenshooter that throws an exception on capture.
      * @return a failing screenshooter instance

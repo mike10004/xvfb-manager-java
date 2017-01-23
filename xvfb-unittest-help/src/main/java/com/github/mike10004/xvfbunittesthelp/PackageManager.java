@@ -3,13 +3,13 @@
  */
 package com.github.mike10004.xvfbunittesthelp;
 
+import com.github.mike10004.nativehelper.Whicher;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
-import com.novetta.ibg.common.sys.Whicher;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
@@ -19,8 +19,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 
 public abstract class PackageManager {
 

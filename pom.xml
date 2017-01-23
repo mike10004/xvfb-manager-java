@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.mike10004</groupId>
     <artifactId>xvfb-manager-parent</artifactId>
-    <version>0.4</version>
+    <version>0.5</version>
     <packaging>pom</packaging>
     <name>xvfb-manager-parent</name>
     <modules>
@@ -16,7 +16,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <common-helper.version>5.1.0</common-helper.version>
+        <common-helper.version>6.0.0</common-helper.version>
     </properties>
     <profiles>
         <profile>

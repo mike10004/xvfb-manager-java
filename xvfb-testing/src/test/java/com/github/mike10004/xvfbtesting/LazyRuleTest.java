@@ -5,7 +5,7 @@ import com.github.mike10004.xvfbmanager.DefaultXvfbController;
 import com.github.mike10004.xvfbmanager.XvfbController;
 import com.github.mike10004.xvfbmanager.XvfbManager;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.novetta.ibg.common.sys.Platforms;
+import com.github.mike10004.nativehelper.Platforms;
 import org.junit.Assume;
 import org.junit.Test;
 

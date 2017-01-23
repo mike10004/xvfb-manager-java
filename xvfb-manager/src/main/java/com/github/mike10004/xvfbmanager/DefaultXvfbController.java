@@ -21,7 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Map;
@@ -107,6 +106,15 @@ public class DefaultXvfbController implements XvfbController {
     public Map<String, String> configureEnvironment(Map<String, String> environment) {
         environment.put(ENV_DISPLAY, display);
         return environment;
+    }
+
+    @Override
+    public Map<String, String> newEnvironment() {
+        return configureEnvironment(createEmptyMutableMap());
+    }
+
+    protected Map<String, String> createEmptyMutableMap() {
+        return new java.util.HashMap<>();
     }
 
     private boolean checkAbort() {

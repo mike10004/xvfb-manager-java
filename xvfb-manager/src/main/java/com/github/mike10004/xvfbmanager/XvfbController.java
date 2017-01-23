@@ -8,7 +8,6 @@ import com.google.common.base.Predicate;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -54,6 +53,13 @@ public interface XvfbController extends Closeable {
      * @see #ENV_DISPLAY
      */
     Map<String, String> configureEnvironment(Map<String, String> environment);
+
+    /**
+     * Creates a new, mutable environment variable map with the display variable set.
+     * @return the new environment map
+     * @see #configureEnvironment(Map)
+     */
+    Map<String, String> newEnvironment();
 
     /**
      * Captures a screenshot of the virtual framebuffer.

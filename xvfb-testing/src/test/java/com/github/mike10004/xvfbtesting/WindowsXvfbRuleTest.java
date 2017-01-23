@@ -2,7 +2,7 @@ package com.github.mike10004.xvfbtesting;
 
 import com.github.mike10004.xvfbmanager.XvfbController;
 import com.google.common.base.Predicates;
-import com.novetta.ibg.common.sys.Platforms;
+import com.github.mike10004.nativehelper.Platforms;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;

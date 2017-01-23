@@ -1,12 +1,12 @@
 package com.github.mike10004.xvfbmanager;
 
+import com.github.mike10004.nativehelper.Platforms;
 import com.github.mike10004.nativehelper.Program;
 import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
+import com.github.mike10004.nativehelper.Whicher;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.novetta.ibg.common.sys.Platforms;
-import com.novetta.ibg.common.sys.Whicher;
 import org.apache.commons.io.FileUtils;
 import org.junit.Assume;
 import org.junit.Test;

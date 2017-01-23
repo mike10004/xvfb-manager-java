@@ -3,11 +3,10 @@
  */
 package com.github.mike10004.xvfbtesting;
 
+import com.github.mike10004.nativehelper.Platforms;
 import com.github.mike10004.xvfbmanager.XvfbController;
 import com.github.mike10004.xvfbmanager.XvfbException;
 import com.github.mike10004.xvfbmanager.XvfbManager;
-import com.google.common.annotations.VisibleForTesting;
-import com.novetta.ibg.common.sys.Platforms;
 import org.junit.rules.ExternalResource;
 import org.junit.rules.TemporaryFolder;
 
