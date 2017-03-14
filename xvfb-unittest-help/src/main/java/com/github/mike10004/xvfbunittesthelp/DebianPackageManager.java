@@ -67,6 +67,7 @@ class DebianPackageManager extends PackageManager {
                 return version;
             }
         }
-        throw new IOException("package not installed or error occurred while querying version");
+        throw new IndeterminateVersionException("package not installed or error occurred while querying version");
     }
+
 }

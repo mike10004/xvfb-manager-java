@@ -39,7 +39,7 @@ public class DebianPackageManagerTest {
         assertTrue("coreutils version starts with digit", version.matches("^\\d+\\b.*$"));
     }
 
-    @org.junit.Test(expected = IOException.class)
+    @org.junit.Test(expected = DebianPackageManager.IndeterminateVersionException.class)
     public void queryPackageVersion_notInstalled() throws Exception {
         instance.queryPackageVersion("xvfb-manager-unittest-unicorn");
     }

@@ -3,6 +3,7 @@
  */
 package com.github.mike10004.xvfbunittesthelp;
 
+import com.github.mike10004.nativehelper.Platforms;
 import com.github.mike10004.nativehelper.Whicher;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
@@ -37,6 +38,14 @@ public abstract class PackageManager {
 
     public abstract boolean queryPackageInstalled(String packageName) throws IOException;
 
+    /**
+     * Queries for the installed version of a package.
+     * @param packageName the package name
+     * @return a string representing the package version
+     * @throws IndeterminateVersionException if the version could not be determined, probably because
+     * the package is not installed
+     * @throws IOException if something else goes awry
+     */
     public abstract String queryPackageVersion(String packageName) throws IOException;
 
     public boolean checkImageMagickInstalled() throws IOException {
@@ -93,6 +102,8 @@ public abstract class PackageManager {
                 return new DebianPackageManager();
             } else if (whicher.which("dnf").isPresent()) {
                 return new FedoraPackageManager();
+            } else if (Platforms.getPlatform().isOSX() && whicher.which("brew").isPresent()) {
+                return new BrewPackageManager();
             } else {
                 Logger.getLogger(PackageManager.class.getName()).warning("operating system not fully supported; " +
                         "will not be able to determine installation status of packages");
@@ -173,4 +184,18 @@ public abstract class PackageManager {
         }
     }
 
+    @SuppressWarnings("unused")
+    static class IndeterminateVersionException extends IOException {
+        public IndeterminateVersionException(String message) {
+            super(message);
+        }
+
+        public IndeterminateVersionException(String message, Throwable cause) {
+            super(message, cause);
+        }
+
+        public IndeterminateVersionException(Throwable cause) {
+            super(cause);
+        }
+    }
 }

@@ -60,17 +60,7 @@ public class XvfbManagerTest {
     @Rule
     public TemporaryFolder tmp = new TemporaryFolder();
 
-    @org.junit.Test
-    public void toDisplayValue() {
-        System.out.println("\ntoDisplayValue\n");
-        assertEquals("display", ":123", XvfbManager.toDisplayValue(123));
-    }
 
-    @org.junit.Test(expected=IllegalArgumentException.class)
-    public void toDisplayValue_negative() {
-        System.out.println("\ntoDisplayValue_negative\n");
-        XvfbManager.toDisplayValue(-1);
-    }
 
     @org.junit.BeforeClass
     public static void checkPrerequisities() throws IOException {
@@ -250,4 +240,18 @@ public class XvfbManagerTest {
         };
     }
 
+    public static class StaticMethodTest {
+
+        @org.junit.Test
+        public void toDisplayValue() {
+            System.out.println("\ntoDisplayValue\n");
+            assertEquals("display", ":123", XvfbManager.toDisplayValue(123));
+        }
+
+        @org.junit.Test(expected = IllegalArgumentException.class)
+        public void toDisplayValue_negative() {
+            System.out.println("\ntoDisplayValue_negative\n");
+            XvfbManager.toDisplayValue(-1);
+        }
+    }
 }
