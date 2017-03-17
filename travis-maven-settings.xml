@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Travis adds some extra repos by default, but they are unnecessary for our purposes. -->
+<!-- This settings.xml file disables them, so that Maven will look only in central for dependencies. -->
+<settings xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.1.0 http://maven.apache.org/xsd/settings-1.1.0.xsd">
+    <localRepository xmlns="http://maven.apache.org/SETTINGS/1.1.0">/home/travis/.m2/repository</localRepository>
+    <profiles xmlns="http://maven.apache.org/SETTINGS/1.1.0">
+        <profile>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <repositories>
+                <repository>
+                    <releases />
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                    <id>central</id>
+                    <name>Central Repository</name>
+                    <url>http://repo.maven.apache.org/maven2</url>
+                </repository>
+                <repository>
+                    <releases>
+                        <enabled>false</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                    <id>sonatype</id>
+                    <name>OSS Sonatype repo (releases)</name>
+                    <url>https://oss.sonatype.org/content/repositories/releases/</url>
+                </repository>
+                <repository>
+                    <releases>
+                        <enabled>false</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                    <id>sonatype-snapshots</id>
+                    <name>OSS Sonatype repo (snapshots)</name>
+                    <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+                </repository>
+                <repository>
+                    <releases>
+                        <enabled>false</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                    <id>sonatype-apache</id>
+                    <name>Apache repo (releases)</name>
+                    <url>https://repository.apache.org/releases/</url>
+                </repository>
+                <repository>
+                    <releases>
+                        <enabled>false</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                    <id>apache-snapshots</id>
+                    <name>ASF repo (snapshots)</name>
+                    <url>https://repository.apache.org/snapshots/</url>
+                </repository>
+                <repository>
+                    <releases>
+                        <enabled>false</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                    <id>codehaus-snapshots</id>
+                    <name>Codehaus (snapshots)</name>
+                    <url>https://nexus.codehaus.org/snapshots/</url>
+                </repository>
+            </repositories>
+            <id>standard-with-extra-repos</id>
+        </profile>
+    </profiles>
+    <pluginGroups xmlns="http://maven.apache.org/SETTINGS/1.1.0">
+        <pluginGroup>org.apache.maven.plugins</pluginGroup>
+        <pluginGroup>org.codehaus.mojo</pluginGroup>
+    </pluginGroups>
+</settings>
