@@ -15,4 +15,4 @@ before_install:
 install: mvn compile test-compile
 before_script:
   - find /tmp -maxdepth 1 -iname ".X*"
-script: mvn--settings travis-maven-settings.xml install -B -Ptravis -Dwdm.gitHubTokenName=$GITHUB_TOKEN_NAME -Dwdm.gitHubTokenSecret=$GITHUB_TOKEN_SECRET
+script: mvn --settings travis-maven-settings.xml install -B -Ptravis -Dwdm.gitHubTokenName=$GITHUB_TOKEN_NAME -Dwdm.gitHubTokenSecret=$GITHUB_TOKEN_SECRET
