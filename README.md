@@ -166,6 +166,18 @@ distribution.
   </tr>
 </table>
 
+FAQ
+---
+
+### Does it work on MacOS?
+
+Not really, but you might be able to shoehorn it. You can install [XQuartz] 
+(see [Homebrew instructions]), but that version of Xvfb requires being
+run as root (for the creation of secure directories in /tmp), and you should
+be justifiably skeptical of anyone suggesting you run your unit tests as root.
+You might be able to get around this be manually creating `/tmp/.X11-unix` as
+root and setting its permissions to 1777 *before* you run your tests.
+
 Acknowledgements
 ----------------
 
@@ -175,3 +187,4 @@ CC BY-SA 4.0, https://commons.wikimedia.org/w/index.php?curid=34785750.
 [WebDriverManager]: https://github.com/bonigarcia/webdrivermanager
 [rate-limiting]: https://developer.github.com/v3/#rate-limiting
 [GitHub account]: https://github.com/settings/tokens
+[Homebrew instructions]: http://macappstore.org/xquartz/
