@@ -6,17 +6,13 @@ package com.github.mike10004.xvfbmanagerexample;
 import com.github.mike10004.xvfbmanager.XvfbController;
 import com.github.mike10004.xvfbmanager.XvfbManager;
 import com.github.mike10004.xvfbselenium.WebDriverSupport;
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableMap;
-import io.github.bonigarcia.wdm.WebDriverManager;
-import org.apache.commons.lang3.tuple.Pair;
+import io.github.bonigarcia.wdm.ChromeDriverManager;
+import io.github.bonigarcia.wdm.MarionetteDriverManager;
 import org.openqa.selenium.OutputType;
 import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.firefox.FirefoxBinary;
-import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxProfile;
 
 import javax.imageio.ImageIO;
@@ -25,10 +21,9 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
-import static com.google.common.base.Preconditions.checkArgument;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 
 public class XvfbManagerExample {
 
@@ -40,8 +35,8 @@ public class XvfbManagerExample {
             System.exit(1);
         }
         String browserKey = args[0];
-        if (!browserMap.containsKey(browserKey)) {
-            System.err.format("first argument must be one of {%s}%n", Joiner.on(", ").join(browserMap.keySet()));
+        if (!WebDriverAsset.SUPPORTED.contains(browserKey)) {
+            System.err.format("first argument must be one of {%s}%n", Joiner.on(", ").join(WebDriverAsset.SUPPORTED));
             System.exit(1);
         }
         URL url = new URL(args[1]);
@@ -67,12 +62,10 @@ public class XvfbManagerExample {
      * @throws IOException
      */
     private static BufferedImage browse(String browserKey, URL url, String display) throws IOException {
-        Pair<Class<? extends WebDriver>, Function<String, ? extends WebDriver>> driverStuff = browserMap.get(browserKey);
-        checkArgument(driverStuff != null, "unsupported browser: %s", browserKey);
-        System.out.format("browsing %s on display %s with %s%n", url, display, driverStuff.getLeft());
-        Class<? extends WebDriver> webDriverClass = driverStuff.getLeft();
-        WebDriverManager.getInstance(webDriverClass).setup();
-        WebDriver webDriver = driverStuff.getRight().apply(display);
+        WebDriverAsset asset = WebDriverAsset.getAsset(browserKey);
+        System.out.format("browsing %s on display %s with %s%n", url, display, browserKey);
+        asset.setupDriver();
+        WebDriver webDriver = asset.createDriver(display);
         try {
             webDriver.get(url.toString());
             byte[] screenshotBytes = ((TakesScreenshot)webDriver).getScreenshotAs(OutputType.BYTES);
@@ -83,25 +76,49 @@ public class XvfbManagerExample {
         }
     }
 
-    private static final ImmutableMap<String, Pair<Class<? extends WebDriver>, Function<String, ? extends WebDriver>>> browserMap =
-            ImmutableMap.<String, Pair<Class<? extends WebDriver>, Function<String, ? extends WebDriver>>>builder()
-            .put("firefox", Pair.of(org.openqa.selenium.firefox.MarionetteDriver.class, new Function<String, FirefoxDriver>(){
-                @Override
-                public FirefoxDriver apply(String display) {
+    private interface WebDriverAsset {
+        String FIREFOX_DRIVER_VERSION = "0.14.0";
+        String CHROME_DRIVER_VERSION = "2.27";
+        Collection<String> SUPPORTED = Collections.unmodifiableList(Arrays.asList("chrome", "firefox"));
+        void setupDriver();
+        WebDriver createDriver(String display);
+        static WebDriverAsset getAsset(String browserKey) {
+            switch (browserKey) {
+                case "firefox":
                     String firefoxBin = System.getenv(ENV_FIREFOX_BIN);
-                    if (firefoxBin != null) {
-                        System.out.format("using firefox binary path from environment variable %s: %s%n", ENV_FIREFOX_BIN, firefoxBin);
-                        return WebDriverSupport.firefoxOnDisplay(display).create(new FirefoxBinary(new File(firefoxBin)), new FirefoxProfile());
-                    } else {
-                        return WebDriverSupport.firefoxOnDisplay(display).create();
-                    }
-                }
-            }))
-            .put("chrome", Pair.of(ChromeDriver.class, new Function<String, ChromeDriver>(){
-                @Override
-                public ChromeDriver apply(String display) {
-                    return WebDriverSupport.chromeOnDisplay(display).create();
-                }
-            }))
-            .build();
+                    return new WebDriverAsset() {
+                        @Override
+                        public void setupDriver() {
+                            MarionetteDriverManager.getInstance().setup(FIREFOX_DRIVER_VERSION);
+                        }
+
+                        @Override
+                        public WebDriver createDriver(String display) {
+                            if (firefoxBin != null) {
+                                System.out.format("using firefox binary path from environment variable %s: %s%n", ENV_FIREFOX_BIN, firefoxBin);
+                                return WebDriverSupport.firefoxOnDisplay(display)
+                                        .create(new FirefoxBinary(new File(firefoxBin)), new FirefoxProfile());
+                            } else {
+                                return WebDriverSupport.firefoxOnDisplay(display).create();
+                            }
+                        }
+                    };
+                case "chrome":
+                    return new WebDriverAsset() {
+                        @Override
+                        public void setupDriver() {
+                            ChromeDriverManager.getInstance().setup(CHROME_DRIVER_VERSION);
+                        }
+
+                        @Override
+                        public WebDriver createDriver(String display) {
+                            return WebDriverSupport.chromeOnDisplay(display).create();
+                        }
+                    };
+                default:
+                    throw new IllegalArgumentException("browser not supported: " + browserKey);
+            }
+        }
+    }
+
 }
