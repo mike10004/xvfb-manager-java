@@ -77,6 +77,7 @@ public class XwdFileToPngConverter implements ScreenshotConverter<Screenshot, Im
             deleteInputFile = false;
         } else {
             inputFile = File.createTempFile("xwdtopnm-stdin", ".xwd", tempDir.toFile());
+            inputSource.copyTo(Files.asByteSink(inputFile));
             deleteInputFile = true;
         }
         try {

@@ -137,6 +137,7 @@ public class XvfbManagerTest {
         }
     }
 
+    @SuppressWarnings("SameParameterValue")
     private void testUsingController(XvfbController ctrl, XvfbConfig config, boolean takeScreenshots) throws InterruptedException, IOException, URISyntaxException {
         File imageFile = new File(XvfbManager.class.getResource("/example.jpg").toURI());
         ctrl.waitUntilReady(Tests.getReadinessPollIntervalMs(), Tests.getMaxReadinessPolls());
@@ -150,12 +151,7 @@ public class XvfbManagerTest {
         ListenableFuture<ProgramWithOutputStringsResult> graphicalProgramFuture = launchProgramOnDisplay(display, imageFile);
         String filename = imageFile.getName();
         final String expectedWindowName = "ImageMagick: " + filename;
-        Optional<TreeNode<XWindow>> window = ctrl.pollForWindow(new Predicate<XWindow>() {
-            @Override
-            public boolean apply(XWindow input) {
-                return expectedWindowName.equals(input.title);
-            }
-        }, 250, 4);
+        Optional<TreeNode<XWindow>> window = ctrl.pollForWindow(input -> input != null && expectedWindowName.equals(input.title), 250, 4);
         checkState(window.isPresent(), "never saw image magick window");
         if (takeScreenshots) {
             System.out.println("capturing screenshot after launching x program");
@@ -228,7 +224,7 @@ public class XvfbManagerTest {
         Spectrum spectrum = Rainbow4J.readSpectrum(image);
         List<ColorDistribution> colorDistributions = spectrum.getColorDistribution(1);
         System.out.format("%d color distribution elements%n", colorDistributions.size());
-        ColorDistribution blackDist = Iterables.find(colorDistributions, forColor(Color.black), null);
+        ColorDistribution blackDist = colorDistributions.stream().filter(forColor(Color.black)::apply).findFirst().orElse(null);
         checkState(blackDist != null, "not enough black in image to evaluate blackness; must have at least 1% black");
         System.out.format("color distribution: %s %s%n", blackDist.getColor(), blackDist.getPercentage());
         checkState(blackDist.getColor().equals(Color.black), "only element in distribution list is not black: %s", blackDist.getColor());
@@ -242,12 +238,7 @@ public class XvfbManagerTest {
 
     private static Predicate<ColorDistribution> forColor(final Color color) {
         checkNotNull(color);
-        return new Predicate<ColorDistribution>() {
-            @Override
-            public boolean apply(ColorDistribution input) {
-                return color.equals(input.getColor());
-            }
-        };
+        return input -> input != null && color.equals(input.getColor());
     }
 
 }
