@@ -210,7 +210,17 @@ public class XvfbManagerTest {
 
     private void checkScreenshot(Screenshot screenshot, boolean allBlackExpected, XvfbConfig config) throws IOException {
         checkState(screenshot instanceof XwdFileScreenshot, "not an ImageIO-readable screenshot: %s", screenshot);
-        ImageioReadableScreenshot pngScreenshot = new XwdFileToPngConverter(tmp.newFolder().toPath()).convert(screenshot);
+        ImageioReadableScreenshot pngScreenshot;
+        try {
+            pngScreenshot = new XwdFileToPngConverter(tmp.newFolder().toPath()).convert(screenshot);
+        } catch (IOException e) {
+            Throwable cause = e;
+            while (cause != null) {
+                cause.printStackTrace(System.out);
+                cause = cause.getCause();
+            }
+            throw e;
+        }
         File pngFile = File.createTempFile("screenshot", ".png", tmp.getRoot());
         pngScreenshot.asByteSource().copyTo(Files.asByteSink(pngFile));
         ImageInfo imageInfo = ImageInfos.read(pngScreenshot.asByteSource());

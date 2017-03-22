@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
@@ -81,7 +82,7 @@ public class XwdFileToPngConverter implements ScreenshotConverter<Screenshot, Im
             deleteInputFile = true;
         }
         try {
-            return convert(source, pnmFile, stderrFile, inputFile);
+            return convert(pnmFile, stderrFile, inputFile);
         } finally {
             if (deleteInputFile) {
                 if (!inputFile.delete()) {
@@ -91,7 +92,13 @@ public class XwdFileToPngConverter implements ScreenshotConverter<Screenshot, Im
         }
     }
 
-    public ImageioReadableScreenshot convert(Screenshot source, File pnmFile, File stderrFile, File inputFile) throws IOException, XvfbException {
+    protected ImageioReadableScreenshot convert(File pnmFile, File stderrFile, File inputFile) throws IOException, XvfbException {
+        if (!inputFile.isFile()) {
+            throw new FileNotFoundException(inputFile.getAbsolutePath());
+        }
+        if (inputFile.length() <= 0) {
+            throw new IOException("input file is empty: " + inputFile);
+        }
         ProgramWithOutputFiles xwdtopnm = Program.running(PROG_XWDTOPNM)
                 .args("-")
                 .reading(inputFile)
