@@ -7,13 +7,18 @@ import com.github.mike10004.xvfbmanager.XvfbController;
 import com.github.mike10004.xvfbmanager.XvfbManager;
 import com.github.mike10004.xvfbselenium.WebDriverSupport;
 import com.google.common.base.Joiner;
+import com.google.common.io.Files;
+import io.github.bonigarcia.wdm.BrowserManager;
 import io.github.bonigarcia.wdm.ChromeDriverManager;
-import io.github.bonigarcia.wdm.MarionetteDriverManager;
+import io.github.bonigarcia.wdm.FirefoxDriverManager;
+import io.github.bonigarcia.wdm.WebDriverManager;
+import org.apache.commons.io.FileUtils;
 import org.openqa.selenium.OutputType;
 import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.firefox.FirefoxBinary;
 import org.openqa.selenium.firefox.FirefoxProfile;
+import org.openqa.selenium.remote.RemoteWebDriver;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -24,6 +29,9 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static com.google.common.base.Preconditions.checkState;
 
 public class XvfbManagerExample {
 
@@ -31,7 +39,10 @@ public class XvfbManagerExample {
 
     public static void main(String[] args) throws IOException, InterruptedException {
         if (args.length < 3) {
-            System.err.format("Syntax:%n    chrome http://example.com screenshot.png%n    firefox http://example.com screenshot.png%nExactly 3 arguments required.%n");
+            System.err.format("Syntax:%n" +
+                    "    chrome http://example.com screenshot.png%n" +
+                    "    firefox http://example.com screenshot.png%n" +
+                    "Exactly 3 arguments required.%n");
             System.exit(1);
         }
         String browserKey = args[0];
@@ -59,17 +70,18 @@ public class XvfbManagerExample {
      * Visit a given URL and return a screenshot.
      * @param url the url
      * @return an image captured by the browser
-     * @throws IOException
      */
     private static BufferedImage browse(String browserKey, URL url, String display) throws IOException {
         WebDriverAsset asset = WebDriverAsset.getAsset(browserKey);
         System.out.format("browsing %s on display %s with %s%n", url, display, browserKey);
         asset.setupDriver();
         WebDriver webDriver = asset.createDriver(display);
+        checkState(((RemoteWebDriver)webDriver).getSessionId() != null, "no session id in %s", webDriver);
         try {
             webDriver.get(url.toString());
             byte[] screenshotBytes = ((TakesScreenshot)webDriver).getScreenshotAs(OutputType.BYTES);
             BufferedImage screenshotImage = ImageIO.read(new ByteArrayInputStream(screenshotBytes));
+            System.out.format("returning screenshot %s%n", screenshotImage);
             return screenshotImage;
         } finally {
             webDriver.quit();
@@ -77,7 +89,7 @@ public class XvfbManagerExample {
     }
 
     private interface WebDriverAsset {
-        String FIREFOX_DRIVER_VERSION = "0.14.0";
+        String FIREFOX_DRIVER_VERSION = "0.16.1";
         String CHROME_DRIVER_VERSION = "2.27";
         Collection<String> SUPPORTED = Collections.unmodifiableList(Arrays.asList("chrome", "firefox"));
         void setupDriver();
@@ -89,7 +101,8 @@ public class XvfbManagerExample {
                     return new WebDriverAsset() {
                         @Override
                         public void setupDriver() {
-                            MarionetteDriverManager.getInstance().setup(FIREFOX_DRIVER_VERSION);
+                            BrowserManager mgr = FirefoxDriverManager.getInstance();
+                            mgr.version(FIREFOX_DRIVER_VERSION).setup();
                         }
 
                         @Override
@@ -107,7 +120,7 @@ public class XvfbManagerExample {
                     return new WebDriverAsset() {
                         @Override
                         public void setupDriver() {
-                            ChromeDriverManager.getInstance().setup(CHROME_DRIVER_VERSION);
+                            ChromeDriverManager.getInstance().version(CHROME_DRIVER_VERSION).setup();
                         }
 
                         @Override

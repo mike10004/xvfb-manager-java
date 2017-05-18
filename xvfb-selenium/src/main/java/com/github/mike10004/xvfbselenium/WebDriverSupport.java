@@ -3,10 +3,12 @@
  */
 package com.github.mike10004.xvfbselenium;
 
+import com.google.common.base.CharMatcher;
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.io.Files;
+import org.apache.commons.io.FileUtils;
 import org.openqa.selenium.Capabilities;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeDriverService;
 import org.openqa.selenium.chrome.ChromeOptions;
@@ -14,19 +16,16 @@ import org.openqa.selenium.firefox.FirefoxBinary;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxOptions;
 import org.openqa.selenium.firefox.FirefoxProfile;
-import org.openqa.selenium.firefox.GeckoDriverService;
-import org.openqa.selenium.logging.LoggingPreferences;
 import org.openqa.selenium.remote.DesiredCapabilities;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Map;
+import java.util.logging.Logger;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.openqa.selenium.firefox.FirefoxOptions.FIREFOX_OPTIONS;
-import static org.openqa.selenium.firefox.FirefoxOptions.OLD_FIREFOX_OPTIONS;
-import static org.openqa.selenium.remote.CapabilityType.ACCEPT_SSL_CERTS;
-import static org.openqa.selenium.remote.CapabilityType.HAS_NATIVE_EVENTS;
-import static org.openqa.selenium.remote.CapabilityType.LOGGING_PREFS;
-import static org.openqa.selenium.remote.CapabilityType.SUPPORTS_WEB_STORAGE;
+import static com.google.common.base.Preconditions.checkState;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class WebDriverSupport {
 
@@ -73,81 +72,68 @@ public class WebDriverSupport {
         }
 
         public FirefoxDriver create(FirefoxBinary binary, FirefoxProfile profile, Capabilities desiredCapabilities) {
-            for (String variableName : environment.keySet()) {
-                binary.setEnvironmentProperty(variableName, environment.get(variableName));
+            return createWithGeckodriverWrapper(binary, profile, desiredCapabilities);
+        }
+
+        private static final String PROPNAME_GECKO = "webdriver.gecko.driver";
+
+        private static boolean hasNoWhitespace(String str) {
+            return CharMatcher.whitespace().matchesNoneOf(str);
+        }
+
+        /*
+         * This is hacky af, but as of selenium-java 3.4.0, we can't provide
+         * the FirefoxDriver constructor our own GeckoDriverService with the
+         * appropriate environment.
+         */
+        private static File swapGeckodriverForWrapperScript(Map<String, String> environment) {
+            try {
+                String geckodriverPath = System.getProperty(PROPNAME_GECKO);
+                checkState(geckodriverPath != null, "must have system property " + PROPNAME_GECKO + " defined");
+                checkState(hasNoWhitespace(geckodriverPath), "can't handle whitespace in geckodriver executable path '%s'", geckodriverPath);
+                File tmpDir = FileUtils.getTempDirectory();
+                File scriptFile = File.createTempFile("geckodriver-wrapper", ".sh", tmpDir);
+                scriptFile.deleteOnExit();
+                environment.forEach((key, value) -> {
+                    checkState(hasNoWhitespace(key), "variable name must be whitespace-free: %s", key);
+                    checkState(hasNoWhitespace(value), "variable value must be whitespace-free: %s=%s", key, value);
+                });
+                String scriptContent = "#!/bin/bash\n" +
+                        "exec /usr/bin/env " + Joiner.on(' ').withKeyValueSeparator('=').join(environment) + " " + geckodriverPath + " $@\n";
+                Files.write(scriptContent, scriptFile, UTF_8);
+                checkState(scriptFile.setExecutable(true), "setExecutable(true) returned false on %s", scriptFile);
+                System.setProperty(PROPNAME_GECKO, scriptFile.getAbsolutePath());
+                return scriptFile;
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
-            // What we want:
-            //     WebDriver driver = new FirefoxDriver(binary, profile, capabilities);
-            // What we're forced to do because the FirefoxBinary's environment is not passed to GeckoDriverService:
-            GeckoDriverService driverService = buildDriverService(binary);
-            Capabilities desiredCapabilitiesWithProfileProperties = FirefoxProfiles.populateProfile(profile, desiredCapabilities);
-            Capabilities requiredCapabilities = null;
-            FirefoxDriver driver = new FirefoxDriver(driverService, desiredCapabilitiesWithProfileProperties, requiredCapabilities);
-            return driver;
         }
 
-        private static GeckoDriverService buildDriverService(FirefoxBinary binary) {
-            checkNotNull(binary, "binary");
-            GeckoDriverService.Builder builder = new GeckoDriverService.Builder(binary);
-            builder.withEnvironment(binary.getExtraEnv());
-            builder.usingPort(0);
-            return builder.build();
-        }
-
-        private static class FirefoxProfiles {
-
-            private FirefoxProfiles () {}
-
-            public static Capabilities populateProfile(FirefoxProfile profile, Capabilities capabilities) {
-                checkNotNull(profile, "profile");
-                checkNotNull(capabilities, "capabilities");
-                if (capabilities.getCapability(SUPPORTS_WEB_STORAGE) != null) {
-                    Boolean supportsWebStorage = (Boolean) capabilities.getCapability(SUPPORTS_WEB_STORAGE);
-                    profile.setPreference("dom.storage.enabled", supportsWebStorage.booleanValue());
-                }
-                if (capabilities.getCapability(ACCEPT_SSL_CERTS) != null) {
-                    Boolean acceptCerts = (Boolean) capabilities.getCapability(ACCEPT_SSL_CERTS);
-                    profile.setAcceptUntrustedCertificates(acceptCerts);
-                }
-                if (capabilities.getCapability(LOGGING_PREFS) != null) {
-                    LoggingPreferences logsPrefs =
-                            (LoggingPreferences) capabilities.getCapability(LOGGING_PREFS);
-                    for (String logtype : logsPrefs.getEnabledLogTypes()) {
-                        profile.setPreference("webdriver.log." + logtype,
-                                logsPrefs.getLevel(logtype).intValue());
+        private FirefoxDriver createWithGeckodriverWrapper(FirefoxBinary binary, FirefoxProfile profile, Capabilities desiredCapabilities) {
+            File scriptFile = null;
+            if (!environment.isEmpty()) {
+                scriptFile = swapGeckodriverForWrapperScript(environment);
+            }
+            try {
+                FirefoxOptions options = new FirefoxOptions();
+                options.setBinary(binary);
+                options.setProfile(profile);
+                Capabilities mergedCaps = desiredCapabilities.merge(options.toCapabilities());
+                FirefoxDriver driver = new FirefoxDriver(mergedCaps);
+                return driver;
+            } finally {
+                // delete executable after it has been executed
+                if (scriptFile != null) {
+                    if (!scriptFile.delete()) {
+                        Logger.getLogger(getClass().getName()).warning("failed to delete script file " + scriptFile);
                     }
                 }
-
-                if (capabilities.getCapability(HAS_NATIVE_EVENTS) != null) {
-                    Boolean nativeEventsEnabled = (Boolean) capabilities.getCapability(HAS_NATIVE_EVENTS);
-                    profile.setEnableNativeEvents(nativeEventsEnabled);
-                }
-
-                Object rawOptions = capabilities.getCapability(FIREFOX_OPTIONS);
-                if (rawOptions == null) {
-                    rawOptions = capabilities.getCapability(OLD_FIREFOX_OPTIONS);
-                }
-                if (rawOptions != null && !(rawOptions instanceof FirefoxOptions)) {
-                    throw new WebDriverException("Firefox option was set, but is not a FirefoxOption: " + rawOptions);
-                }
-                FirefoxOptions options = (FirefoxOptions) rawOptions;
-                if (options == null) {
-                    options = new FirefoxOptions();
-                }
-                // options.setProfileSafely(profile); // package-private, but we can use setProfile because we know existing profile is null
-                options.setProfile(profile);
-
-                DesiredCapabilities toReturn = capabilities instanceof DesiredCapabilities ?
-                        (DesiredCapabilities) capabilities :
-                        new DesiredCapabilities(capabilities);
-                toReturn.setCapability(OLD_FIREFOX_OPTIONS, options);
-                toReturn.setCapability(FIREFOX_OPTIONS, options);
-                return toReturn;
             }
-
         }
+
     }
 
+    @SuppressWarnings("deprecation")
     public static class ChromeInCustomEnvironment {
 
         private final Map<String, String> environment;
