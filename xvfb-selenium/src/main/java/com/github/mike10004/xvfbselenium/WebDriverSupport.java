@@ -110,25 +110,15 @@ public class WebDriverSupport {
         }
 
         private FirefoxDriver createWithGeckodriverWrapper(FirefoxBinary binary, FirefoxProfile profile, Capabilities desiredCapabilities) {
-            File scriptFile = null;
             if (!environment.isEmpty()) {
-                scriptFile = swapGeckodriverForWrapperScript(environment);
+                swapGeckodriverForWrapperScript(environment);
             }
-            try {
-                FirefoxOptions options = new FirefoxOptions();
-                options.setBinary(binary);
-                options.setProfile(profile);
-                Capabilities mergedCaps = desiredCapabilities.merge(options.toCapabilities());
-                FirefoxDriver driver = new FirefoxDriver(mergedCaps);
-                return driver;
-            } finally {
-                // delete executable after it has been executed
-                if (scriptFile != null) {
-                    if (!scriptFile.delete()) {
-                        Logger.getLogger(getClass().getName()).warning("failed to delete script file " + scriptFile);
-                    }
-                }
-            }
+            FirefoxOptions options = new FirefoxOptions();
+            options.setBinary(binary);
+            options.setProfile(profile);
+            Capabilities mergedCaps = desiredCapabilities.merge(options.toCapabilities());
+            FirefoxDriver driver = new FirefoxDriver(mergedCaps);
+            return driver;
         }
 
     }
