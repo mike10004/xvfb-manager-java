@@ -5,7 +5,7 @@
     <parent>
         <artifactId>xvfb-manager-parent</artifactId>
         <groupId>com.github.mike10004</groupId>
-        <version>0.6</version>
+        <version>0.7</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -71,12 +71,10 @@
         <dependency>
             <groupId>org.seleniumhq.selenium</groupId>
             <artifactId>selenium-java</artifactId>
-            <version>3.0.1</version>
         </dependency>
         <dependency>
             <groupId>io.github.bonigarcia</groupId>
             <artifactId>webdrivermanager</artifactId>
-            <version>1.4.10</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
@@ -87,6 +85,11 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
             <version>1.7.21</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.mike10004</groupId>
+            <artifactId>native-helper</artifactId>
+            <version>6.0.0</version>
         </dependency>
     </dependencies>
 </project>
