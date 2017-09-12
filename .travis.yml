@@ -8,6 +8,7 @@ addons:
     - imagemagick
     - xdotool
     - chromium-browser
+    - netpbm
   firefox: "49.0"
 before_install:
   - dpkg-query -l xvfb chromium-browser imagemagick
