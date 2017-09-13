@@ -22,6 +22,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 
@@ -168,7 +169,7 @@ public class XvfbManagerTest {
                 .outputToStrings();
         System.out.format("executing %s%n", imageMagickDisplay);
         ListenableFuture<ProgramWithOutputStringsResult> displayFuture = imageMagickDisplay.executeAsync(Executors.newSingleThreadExecutor());
-        Futures.addCallback(displayFuture, new XvfbManager.LoggingCallback("imagemagick-display", Charset.defaultCharset()));
+        Futures.addCallback(displayFuture, new XvfbManager.LoggingCallback("imagemagick-display", Charset.defaultCharset()), MoreExecutors.directExecutor());
         return displayFuture;
     }
 

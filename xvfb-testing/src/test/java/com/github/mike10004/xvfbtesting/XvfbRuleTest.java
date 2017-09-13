@@ -16,6 +16,7 @@ import com.google.common.io.Files;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -150,7 +151,7 @@ public class XvfbRuleTest {
         }
 
         public void addTo(ListenableFuture<? extends ProgramResult> future) {
-            Futures.addCallback(future, this);
+            Futures.addCallback(future, this, MoreExecutors.directExecutor());
         }
 
         @Override

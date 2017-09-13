@@ -9,9 +9,8 @@ import com.github.mike10004.nativehelper.ProgramWithOutputFiles;
 import com.github.mike10004.nativehelper.ProgramWithOutputFilesResult;
 import com.github.mike10004.nativehelper.ProgramWithOutputResult;
 import com.github.mike10004.nativehelper.Whicher;
-import com.github.mike10004.xvfbmanager.Poller.StopReason;
 import com.github.mike10004.xvfbmanager.Poller.PollOutcome;
-import com.google.common.base.Optional;
+import com.github.mike10004.xvfbmanager.Poller.StopReason;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterables;
@@ -135,7 +134,7 @@ public class XvfbManager {
     }
 
     protected static File resolveXvfbExecutable() throws FileNotFoundException {
-        Optional<File> file = Whicher.gnu().which("Xvfb");
+        java.util.Optional<File> file = Whicher.gnu().which("Xvfb");
         if (!file.isPresent()) {
             throw new FileNotFoundException("Xvfb executable");
         }

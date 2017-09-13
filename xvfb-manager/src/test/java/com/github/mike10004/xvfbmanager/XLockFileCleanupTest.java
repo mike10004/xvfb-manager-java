@@ -4,7 +4,6 @@ import com.github.mike10004.nativehelper.Platforms;
 import com.github.mike10004.nativehelper.Program;
 import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
 import com.github.mike10004.nativehelper.Whicher;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.commons.io.FileUtils;
@@ -27,7 +26,7 @@ public class XLockFileCleanupTest {
 
     private static final Iterable<File> dirs = ImmutableSet.of(new File("/tmp"), FileUtils.getTempDirectory());
 
-    private Optional<File> findLockFileByName(String lockFilename) {
+    private java.util.Optional<File> findLockFileByName(String lockFilename) {
         System.out.format("findLockFileByName: '%s' (%s)%n", lockFilename, dirs);
         return Whicher.builder().inAny(dirs).in(FileUtils.getTempDirectory()).build()
                 .which(lockFilename);
@@ -58,7 +57,7 @@ public class XLockFileCleanupTest {
         try (XvfbController ctrl = starter.apply(manager)) {
             ctrl.waitUntilReady(Tests.getReadinessPollIntervalMs(), Tests.getMaxReadinessPolls());
             ListenableFuture<ProgramWithOutputStringsResult> future = Program.running("xmessage").args("-timeout", "10", "hello, world").outputToStrings().executeAsync(Executors.newSingleThreadExecutor());
-            Optional<File> lockFileOpt = findLockFileByName(lockFileNamer.apply(ctrl));
+            java.util.Optional<File> lockFileOpt = findLockFileByName(lockFileNamer.apply(ctrl));
             System.out.format("display ready on %s; lock file = %s (exists? %s)%n", ctrl.getDisplay(), lockFileOpt, lockFileOpt.isPresent());
             assertTrue("no lock file at " + lockFileOpt, lockFileOpt.isPresent());
             lockFile = lockFileOpt.get();

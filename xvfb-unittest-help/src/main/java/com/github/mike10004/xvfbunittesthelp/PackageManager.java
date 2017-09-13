@@ -4,7 +4,6 @@
 package com.github.mike10004.xvfbunittesthelp;
 
 import com.github.mike10004.nativehelper.Whicher;
-import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
@@ -31,7 +30,7 @@ public abstract class PackageManager {
     }
 
     public boolean queryCommandExecutable(String command) throws IOException {
-        Optional<File> executable = whicher.which(command);
+        java.util.Optional<File> executable = whicher.which(command);
         return executable.isPresent();
     }
 
