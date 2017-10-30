@@ -11,7 +11,6 @@ import com.github.mike10004.nativehelper.ProgramWithOutputResult;
 import com.github.mike10004.nativehelper.Whicher;
 import com.github.mike10004.xvfbmanager.Poller.PollOutcome;
 import com.github.mike10004.xvfbmanager.Poller.StopReason;
-import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterables;
 import com.google.common.io.CharSource;
@@ -19,6 +18,7 @@ import com.google.common.io.Files;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.gson.ExclusionStrategy;
 import com.google.gson.FieldAttributes;
 import com.google.gson.GsonBuilder;
@@ -36,9 +36,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -268,7 +270,7 @@ public class XvfbManager {
             pb = Program.running(xvfbExecutable);
         }
         if (AUTO_DISPLAY) {
-            pb.args("-displayfd", String.valueOf(extractFdReflectively(DISPLAY_RECEIVER)));
+            pb.args("-displayfd", String.valueOf(DISPLAY_RECEIVER_FD));
         } else {
             display = toDisplayValue(displayNumber);
             pb.args(display);
@@ -282,33 +284,46 @@ public class XvfbManager {
         ProgramWithOutputFiles xvfb = pb.outputToFiles(stdoutFile, stderrFile);
         log.trace("executing {}", xvfb);
         ListenableFuture<ProgramWithOutputFilesResult> xvfbFuture = xvfb.executeAsync(executorService);
-        Futures.addCallback(xvfbFuture, new LoggingCallback("xvfb", XVFB_OUTPUT_CHARSET));
+        Executor callbacker = getCallbackExecutor();
+        Futures.addCallback(xvfbFuture, new LoggingCallback("xvfb", XVFB_OUTPUT_CHARSET), callbacker);
         if (scratchDirProvider.isDeleteOnStop()) {
-            Futures.addCallback(xvfbFuture, new DirectoryDeletingCallback(scratchDir.toFile()));
+            Futures.addCallback(xvfbFuture, new DirectoryDeletingCallback(scratchDir.toFile()), callbacker);
         }
         if (AUTO_DISPLAY) {
-            File outputFileContainingDisplay = selectCorrespondingFile(DISPLAY_RECEIVER, stdoutFile, stderrFile);
+            File outputFileContainingDisplay = selectCorrespondingFile(DISPLAY_RECEIVER_FD, stdoutFile, stderrFile);
             int autoDisplayNumber = pollForDisplayNumber(Files.asCharSource(outputFileContainingDisplay, XVFB_OUTPUT_CHARSET));
             display = toDisplayValue(autoDisplayNumber);
         } else {
             checkState(display != null, "display should have been set manually from %s", displayNumber);
         }
         DefaultXvfbController controller = createController(xvfbFuture, display, framebufferDir.toFile());
-        Futures.addCallback(xvfbFuture, new AbortFlagSetter(controller));
+        Futures.addCallback(xvfbFuture, new AbortFlagSetter(controller), callbacker);
         return controller;
     }
 
-    private static final FileDescriptor DISPLAY_RECEIVER = FileDescriptor.err;
+    protected Executor getCallbackExecutor() {
+        return MoreExecutors.directExecutor();
+    }
+
+    /**
+     * File descriptor of the stream on which the display is printed. The program
+     * prints on standard error, which in Linux is always file descriptor 2. We used
+     * to be more abstract and extract the integer from {@link FileDescriptor#err},
+     * but that was just showing off, really, and it used introspection implemented
+     * by Gson that is scheduled to be removed in a future Java release.
+     */
+    private static final int DISPLAY_RECEIVER_FD = 2; // stderr
 
     private static final Charset XVFB_OUTPUT_CHARSET = Charset.defaultCharset(); // xvfb is platform-dependent
 
-    protected static File selectCorrespondingFile(FileDescriptor fd, File stdoutFile, File stderrFile) throws IllegalArgumentException {
-        if (fd.equals(FileDescriptor.out)) {
-            return stdoutFile;
-        } else if (fd.equals(FileDescriptor.err)) {
-            return stderrFile;
-        } else {
-            throw new IllegalArgumentException("no known file corresponds to " + fd);
+    protected static File selectCorrespondingFile(int fd, File stdoutFile, File stderrFile) throws IllegalArgumentException {
+        switch (fd) {
+            case 1:
+                return stdoutFile;
+            case 2:
+                return stderrFile;
+            default:
+                throw new IllegalArgumentException("no known file corresponds to " + fd);
         }
     }
 
@@ -383,35 +398,6 @@ public class XvfbManager {
             throw new XvfbException("polling for display number (because of -displayfd option) did not behave as expected; poll terminated due to " + pollOutcome.reason);
         }
 
-    }
-
-    private static class SingleFieldInclusionStrategy implements ExclusionStrategy {
-
-        private final String fieldName;
-
-        private SingleFieldInclusionStrategy(String fieldName) {
-            this.fieldName = checkNotNull(fieldName);
-        }
-
-        @Override
-        public boolean shouldSkipField(FieldAttributes f) {
-            return !fieldName.equals(f.getName());
-        }
-
-        @Override
-        public boolean shouldSkipClass(Class<?> clazz) {
-            return false;
-        }
-    }
-
-    private static final String FILE_DESCRIPTOR_FIELD_NAME = "fd";
-
-    static int extractFdReflectively(FileDescriptor fdObject) {
-        JsonElement json = new GsonBuilder()
-                .addSerializationExclusionStrategy(new SingleFieldInclusionStrategy(FILE_DESCRIPTOR_FIELD_NAME))
-                .create().toJsonTree(fdObject);
-        int fd = json.getAsJsonObject().get(FILE_DESCRIPTOR_FIELD_NAME).getAsInt();
-        return fd;
     }
 
     private static class AbortFlagSetter implements FutureCallback<ProgramResult> {
