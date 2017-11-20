@@ -6,8 +6,8 @@ package com.github.mike10004.xvfbselenium;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.io.CharSource;
 import com.google.common.io.Files;
-import org.apache.commons.io.FileUtils;
 import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeDriverService;
@@ -21,7 +21,6 @@ import org.openqa.selenium.remote.DesiredCapabilities;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
-import java.util.logging.Logger;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -64,14 +63,14 @@ public class WebDriverSupport {
         }
 
         public FirefoxDriver create(FirefoxBinary binary, FirefoxProfile profile) {
-            return create(binary, profile, new DesiredCapabilities());
+            return create(binary, profile, new FirefoxOptions());
         }
 
-        public FirefoxDriver create(Capabilities desiredCapabilities) {
+        public FirefoxDriver create(FirefoxOptions desiredCapabilities) {
             return create(new FirefoxBinary(), new FirefoxProfile(), desiredCapabilities);
         }
 
-        public FirefoxDriver create(FirefoxBinary binary, FirefoxProfile profile, Capabilities desiredCapabilities) {
+        public FirefoxDriver create(FirefoxBinary binary, FirefoxProfile profile, FirefoxOptions desiredCapabilities) {
             return createWithGeckodriverWrapper(binary, profile, desiredCapabilities);
         }
 
@@ -86,12 +85,13 @@ public class WebDriverSupport {
          * the FirefoxDriver constructor our own GeckoDriverService with the
          * appropriate environment.
          */
+        @SuppressWarnings("UnusedReturnValue")
         private static File swapGeckodriverForWrapperScript(Map<String, String> environment) {
             try {
                 String geckodriverPath = System.getProperty(PROPNAME_GECKO);
                 checkState(geckodriverPath != null, "must have system property " + PROPNAME_GECKO + " defined");
                 checkState(hasNoWhitespace(geckodriverPath), "can't handle whitespace in geckodriver executable path '%s'", geckodriverPath);
-                File tmpDir = FileUtils.getTempDirectory();
+                File tmpDir = new File(System.getProperty("java.io.tmpdir"));
                 File scriptFile = File.createTempFile("geckodriver-wrapper", ".sh", tmpDir);
                 scriptFile.deleteOnExit();
                 environment.forEach((key, value) -> {
@@ -100,7 +100,7 @@ public class WebDriverSupport {
                 });
                 String scriptContent = "#!/bin/bash\n" +
                         "exec /usr/bin/env " + Joiner.on(' ').withKeyValueSeparator('=').join(environment) + " " + geckodriverPath + " $@\n";
-                Files.write(scriptContent, scriptFile, UTF_8);
+                CharSource.wrap(scriptContent).copyTo(Files.asCharSink(scriptFile, UTF_8));
                 checkState(scriptFile.setExecutable(true), "setExecutable(true) returned false on %s", scriptFile);
                 System.setProperty(PROPNAME_GECKO, scriptFile.getAbsolutePath());
                 return scriptFile;
@@ -109,14 +109,14 @@ public class WebDriverSupport {
             }
         }
 
-        private FirefoxDriver createWithGeckodriverWrapper(FirefoxBinary binary, FirefoxProfile profile, Capabilities desiredCapabilities) {
+        private FirefoxDriver createWithGeckodriverWrapper(FirefoxBinary binary, FirefoxProfile profile, FirefoxOptions desiredCapabilities) {
             if (!environment.isEmpty()) {
                 swapGeckodriverForWrapperScript(environment);
             }
             FirefoxOptions options = new FirefoxOptions();
             options.setBinary(binary);
             options.setProfile(profile);
-            Capabilities mergedCaps = desiredCapabilities.merge(options.toCapabilities());
+            FirefoxOptions mergedCaps = desiredCapabilities.merge(options);
             FirefoxDriver driver = new FirefoxDriver(mergedCaps);
             return driver;
         }
@@ -140,20 +140,12 @@ public class WebDriverSupport {
             return new ChromeDriver(buildService(builder));
         }
 
-        public ChromeDriver create(Capabilities capabilities) {
-            return create(createEnvironmentlessDriverServiceBuilder(), capabilities);
-        }
-
         public ChromeDriver create(ChromeOptions options) {
             return create(createEnvironmentlessDriverServiceBuilder(), options);
         }
 
         public ChromeDriver create(ChromeDriverService.Builder builder, ChromeOptions options) {
             return new ChromeDriver(buildService(builder), options);
-        }
-
-        public ChromeDriver create(ChromeDriverService.Builder builder, Capabilities capabilities) {
-            return new ChromeDriver(buildService(builder), capabilities);
         }
 
         protected ChromeDriverService buildService(ChromeDriverService.Builder builder) {
