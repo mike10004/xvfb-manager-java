@@ -3,12 +3,7 @@
  */
 package com.github.mike10004.xvfbselenium;
 
-import com.google.common.base.CharMatcher;
-import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.CharSource;
-import com.google.common.io.Files;
-import org.openqa.selenium.Capabilities;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeDriverService;
 import org.openqa.selenium.chrome.ChromeOptions;
@@ -16,15 +11,11 @@ import org.openqa.selenium.firefox.FirefoxBinary;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxOptions;
 import org.openqa.selenium.firefox.FirefoxProfile;
-import org.openqa.selenium.remote.DesiredCapabilities;
+import org.openqa.selenium.firefox.GeckoDriverService;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class WebDriverSupport {
 
@@ -66,58 +57,17 @@ public class WebDriverSupport {
             return create(binary, profile, new FirefoxOptions());
         }
 
-        public FirefoxDriver create(FirefoxOptions desiredCapabilities) {
-            return create(new FirefoxBinary(), new FirefoxProfile(), desiredCapabilities);
+        public FirefoxDriver create(FirefoxOptions options) {
+            return create(new FirefoxBinary(), new FirefoxProfile(), options);
         }
 
-        public FirefoxDriver create(FirefoxBinary binary, FirefoxProfile profile, FirefoxOptions desiredCapabilities) {
-            return createWithGeckodriverWrapper(binary, profile, desiredCapabilities);
-        }
-
-        private static final String PROPNAME_GECKO = "webdriver.gecko.driver";
-
-        private static boolean hasNoWhitespace(String str) {
-            return CharMatcher.whitespace().matchesNoneOf(str);
-        }
-
-        /*
-         * This is hacky af, but as of selenium-java 3.4.0, we can't provide
-         * the FirefoxDriver constructor our own GeckoDriverService with the
-         * appropriate environment.
-         */
-        @SuppressWarnings("UnusedReturnValue")
-        private static File swapGeckodriverForWrapperScript(Map<String, String> environment) {
-            try {
-                String geckodriverPath = System.getProperty(PROPNAME_GECKO);
-                checkState(geckodriverPath != null, "must have system property " + PROPNAME_GECKO + " defined");
-                checkState(hasNoWhitespace(geckodriverPath), "can't handle whitespace in geckodriver executable path '%s'", geckodriverPath);
-                File tmpDir = new File(System.getProperty("java.io.tmpdir"));
-                File scriptFile = File.createTempFile("geckodriver-wrapper", ".sh", tmpDir);
-                scriptFile.deleteOnExit();
-                environment.forEach((key, value) -> {
-                    checkState(hasNoWhitespace(key), "variable name must be whitespace-free: %s", key);
-                    checkState(hasNoWhitespace(value), "variable value must be whitespace-free: %s=%s", key, value);
-                });
-                String scriptContent = "#!/bin/bash\n" +
-                        "exec /usr/bin/env " + Joiner.on(' ').withKeyValueSeparator('=').join(environment) + " " + geckodriverPath + " $@\n";
-                CharSource.wrap(scriptContent).copyTo(Files.asCharSink(scriptFile, UTF_8));
-                checkState(scriptFile.setExecutable(true), "setExecutable(true) returned false on %s", scriptFile);
-                System.setProperty(PROPNAME_GECKO, scriptFile.getAbsolutePath());
-                return scriptFile;
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-        private FirefoxDriver createWithGeckodriverWrapper(FirefoxBinary binary, FirefoxProfile profile, FirefoxOptions desiredCapabilities) {
-            if (!environment.isEmpty()) {
-                swapGeckodriverForWrapperScript(environment);
-            }
-            FirefoxOptions options = new FirefoxOptions();
-            options.setBinary(binary);
+        public FirefoxDriver create(FirefoxBinary binary, FirefoxProfile profile, FirefoxOptions options) {
             options.setProfile(profile);
-            FirefoxOptions mergedCaps = desiredCapabilities.merge(options);
-            FirefoxDriver driver = new FirefoxDriver(mergedCaps);
+            GeckoDriverService service = new GeckoDriverService.Builder()
+                    .usingAnyFreePort()
+                    .withEnvironment(environment)
+                    .build();
+            FirefoxDriver driver = new FirefoxDriver(service, options);
             return driver;
         }
 
