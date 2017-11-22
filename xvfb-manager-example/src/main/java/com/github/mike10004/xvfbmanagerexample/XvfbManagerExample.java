@@ -5,21 +5,25 @@ package com.github.mike10004.xvfbmanagerexample;
 
 import com.github.mike10004.xvfbmanager.XvfbController;
 import com.github.mike10004.xvfbmanager.XvfbManager;
-import com.github.mike10004.xvfbselenium.WebDriverSupport;
 import com.google.common.base.Joiner;
-import com.google.common.io.Files;
+import com.google.common.collect.ImmutableMap;
 import io.github.bonigarcia.wdm.BrowserManager;
 import io.github.bonigarcia.wdm.ChromeDriverManager;
 import io.github.bonigarcia.wdm.FirefoxDriverManager;
-import io.github.bonigarcia.wdm.WebDriverManager;
-import org.apache.commons.io.FileUtils;
 import org.openqa.selenium.OutputType;
 import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeDriverService;
+import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.firefox.FirefoxBinary;
+import org.openqa.selenium.firefox.FirefoxDriver;
+import org.openqa.selenium.firefox.FirefoxOptions;
 import org.openqa.selenium.firefox.FirefoxProfile;
+import org.openqa.selenium.firefox.GeckoDriverService;
 import org.openqa.selenium.remote.RemoteWebDriver;
 
+import javax.annotation.Nullable;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
@@ -29,7 +33,7 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -88,6 +92,18 @@ public class XvfbManagerExample {
         }
     }
 
+    private static FirefoxDriver create(Map<String, String> environment, @Nullable FirefoxBinary binary, FirefoxProfile profile, FirefoxOptions options) {
+        options.setProfile(profile);
+        GeckoDriverService.Builder serviceBuilder = new GeckoDriverService.Builder()
+                .usingAnyFreePort()
+                .withEnvironment(environment);
+        if (binary != null) {
+            serviceBuilder.usingFirefoxBinary(binary);
+        }
+        FirefoxDriver driver = new FirefoxDriver(serviceBuilder.build(), options);
+        return driver;
+    }
+
     private interface WebDriverAsset {
         String FIREFOX_DRIVER_VERSION = "0.16.1";
         String CHROME_DRIVER_VERSION = "2.27";
@@ -107,12 +123,12 @@ public class XvfbManagerExample {
 
                         @Override
                         public WebDriver createDriver(String display) {
+                            Map<String, String> env = ImmutableMap.of("DISPLAY", display);
                             if (firefoxBin != null) {
                                 System.out.format("using firefox binary path from environment variable %s: %s%n", ENV_FIREFOX_BIN, firefoxBin);
-                                return WebDriverSupport.firefoxOnDisplay(display)
-                                        .create(new FirefoxBinary(new File(firefoxBin)), new FirefoxProfile());
+                                return create(env, new FirefoxBinary(new File(firefoxBin)), new FirefoxProfile(), new FirefoxOptions());
                             } else {
-                                return WebDriverSupport.firefoxOnDisplay(display).create();
+                                return create(env, null, new FirefoxProfile(), new FirefoxOptions());
                             }
                         }
                     };
@@ -125,7 +141,10 @@ public class XvfbManagerExample {
 
                         @Override
                         public WebDriver createDriver(String display) {
-                            return WebDriverSupport.chromeOnDisplay(display).create();
+                            ChromeDriverService.Builder builder = new ChromeDriverService.Builder().usingAnyFreePort();
+                            builder.withEnvironment(ImmutableMap.of("DISPLAY", display));
+                            ChromeOptions options = new ChromeOptions();
+                            return new ChromeDriver(builder.build(), options);
                         }
                     };
                 default:

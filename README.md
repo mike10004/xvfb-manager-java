@@ -15,7 +15,7 @@ Quickstart - Core Library
     <dependency>
         <groupId>com.github.mike10004</groupId>
         <artifactId>xvfb-manager</artifactId>
-        <version>0.4</version>
+        <version>0.14</version>
     </dependency>
 
 ### Code
@@ -66,9 +66,32 @@ The purpose of each module is as follows:
 
 * **xvfb-manager**: core library
 * **xvfb-testing**: JUnit Rule
-* **xvfb-selenium**: helpful code for running Selenium WebDriver with Xvfb
 * **xvfb-unittest-tools**: library only used by above projects for testing
 * **xvfb-manager-example**: executable program demonstrating Selenium usage
+
+Using with Selenium
+-------------------
+
+To use an `XvfbManager` instance with Selenium, start the virtual framebuffer 
+and then configure the webdriver process's environment with the appropriate 
+display. (There used to be an **xvfb-selenium** artifact that had a convenience
+method for this, but I didn't like keeping up with the Selenium API changes.)
+
+### Chrome
+
+    ChromeDriverService service = new ChromeDriverService.Builder()
+            .usingAnyFreePort()
+            .withEnvironment(ImmutableMap.of("DISPLAY", display))
+            .build();
+    return new ChromeDriver(service);
+
+### Firefox
+
+    GeckoDriverService service = new GeckoDriverService.Builder()
+            .usingAnyFreePort()
+            .withEnvironment(ImmutableMap.of("DISPLAY", display))
+            .build();
+    FirefoxDriver driver = new FirefoxDriver(service);
 
 Notes
 -----

@@ -3,13 +3,12 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.mike10004</groupId>
     <artifactId>xvfb-manager-parent</artifactId>
-    <version>0.12</version>
+    <version>0.14-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>xvfb-manager-parent</name>
     <modules>
         <module>xvfb-unittest-help</module>
         <module>xvfb-manager</module>
-        <module>xvfb-selenium</module>
         <module>xvfb-manager-example</module>
         <module>xvfb-testing</module>
     </modules>
