@@ -1,6 +1,6 @@
 package com.github.mike10004.xvfbmanager;
 
-import com.google.common.base.Function;
+import java.util.function.Function;
 import com.google.common.collect.TreeTraverser;
 
 /**
@@ -83,7 +83,8 @@ public interface TreeNode<T> extends Iterable<T> {
         public static <E> TreeTraverser<TreeNode<E>> traverser() {
             return new TreeTraverser<TreeNode<E>>() {
                 @Override
-                public Iterable<TreeNode<E>> children(TreeNode root) {
+                public Iterable<TreeNode<E>> children(@SuppressWarnings("NullableProblems") TreeNode root) {
+                    //noinspection unchecked
                     return root.children();
                 }
             };
@@ -94,6 +95,7 @@ public interface TreeNode<T> extends Iterable<T> {
          * @param <E> the tree node label type
          * @return a new function
          */
+        @SuppressWarnings("unused")
         public static <E> Function<TreeNode<E>, Iterable<TreeNode<E>>> childrenFunction() {
             return new Function<TreeNode<E>, Iterable<TreeNode<E>>>() {
                 @Override

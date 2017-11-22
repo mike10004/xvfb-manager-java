@@ -3,9 +3,9 @@
  */
 package com.github.mike10004.xvfbmanager;
 
-import com.github.mike10004.xvfbmanager.Poller.StopReason;
 import com.github.mike10004.xvfbmanager.Poller.PollOutcome;
 import com.github.mike10004.xvfbmanager.Poller.SimplePoller;
+import com.github.mike10004.xvfbmanager.Poller.StopReason;
 import com.google.common.base.Suppliers;
 import org.junit.Test;
 

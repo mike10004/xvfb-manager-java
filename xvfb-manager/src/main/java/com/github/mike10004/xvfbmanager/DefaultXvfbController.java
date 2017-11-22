@@ -8,10 +8,10 @@ import com.github.mike10004.nativehelper.ProgramWithOutputResult;
 import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
 import com.github.mike10004.xvfbmanager.Poller.PollOutcome;
 import com.github.mike10004.xvfbmanager.Poller.StopReason;
+import com.github.mike10004.xvfbmanager.TreeNode.Utils;
+import com.github.mike10004.xvfbmanager.XvfbManager.DisplayReadinessChecker;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CharMatcher;
-import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.io.CharSource;
@@ -23,9 +23,12 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -64,21 +67,21 @@ public class DefaultXvfbController implements XvfbController {
 
     private final ListenableFuture<? extends ProgramWithOutputResult> xvfbFuture;
     private final String display;
-    private final XvfbManager.DisplayReadinessChecker displayReadinessChecker;
+    private final DisplayReadinessChecker displayReadinessChecker;
     private final XLockFileChecker lockFileChecker;
     private final Screenshooter<?> screenshooter;
     private final Sleeper sleeper;
     private final AtomicBoolean abort;
 
     public DefaultXvfbController(ListenableFuture<? extends ProgramWithOutputResult> xvfbFuture, String display,
-                                 XvfbManager.DisplayReadinessChecker displayReadinessChecker,
+                                 DisplayReadinessChecker displayReadinessChecker,
                                  Screenshooter<?> screenshooter, Sleeper sleeper) {
         this(xvfbFuture, display, displayReadinessChecker, screenshooter, sleeper, new PollingXLockFileChecker(LOCK_FILE_CLEANUP_POLL_INTERVAL_MS, sleeper));
     }
 
     @VisibleForTesting
     protected DefaultXvfbController(ListenableFuture<? extends ProgramWithOutputResult> xvfbFuture, String display,
-                                    XvfbManager.DisplayReadinessChecker displayReadinessChecker,
+                                    DisplayReadinessChecker displayReadinessChecker,
                                     Screenshooter<?> screenshooter, Sleeper sleeper, XLockFileChecker lockFileChecker) {
         this.xvfbFuture = checkNotNull(xvfbFuture);
         this.display = checkNotNull(display);
@@ -89,7 +92,7 @@ public class DefaultXvfbController implements XvfbController {
         this.lockFileChecker = checkNotNull(lockFileChecker);
     }
 
-    void setAbort(boolean abort) {
+    void setAbort(@SuppressWarnings("SameParameterValue") boolean abort) {
         this.abort.getAndSet(abort);
     }
 
@@ -114,15 +117,11 @@ public class DefaultXvfbController implements XvfbController {
     }
 
     protected Map<String, String> createEmptyMutableMap() {
-        return new java.util.HashMap<>();
+        return new HashMap<>();
     }
 
     private boolean checkAbort() {
         return abort.get();
-    }
-
-    private void checkXvfbNotDone() {
-
     }
 
     private String formatXvfbExitedMessage(ProgramWithOutputResult result) {
@@ -231,10 +230,10 @@ public class DefaultXvfbController implements XvfbController {
     }
 
     @Override
-    public Optional<TreeNode<XWindow>> pollForWindow(Predicate<XWindow> windowFinder, long intervalMs, int maxPollAttempts) throws InterruptedException {
+    public Optional<TreeNode<XWindow>> pollForWindow(java.util.function.Predicate<XWindow> windowFinder, long intervalMs, int maxPollAttempts) throws InterruptedException {
         XWindowPoller poller = new XWindowPoller(display, windowFinder);
         PollOutcome<TreeNode<XWindow>> pollResult = poller.poll(intervalMs, maxPollAttempts);
-        return Optional.fromNullable(pollResult.content);
+        return Optional.ofNullable(pollResult.content);
     }
 
     private static class XWindowPoller extends Poller<TreeNode<XWindow>> {
@@ -248,9 +247,9 @@ public class DefaultXvfbController implements XvfbController {
         }
 
         private final String display;
-        private final Predicate<XWindow> evaluator;
+        private final java.util.function.Predicate<XWindow> evaluator;
 
-        public XWindowPoller(String display, Predicate<XWindow> evaluator) {
+        public XWindowPoller(String display, java.util.function.Predicate<XWindow> evaluator) {
             super();
             this.display = checkNotNull(display);
             this.evaluator = checkNotNull(evaluator);
@@ -266,14 +265,11 @@ public class DefaultXvfbController implements XvfbController {
             if (result.getExitCode() == 0) {
                 try {
                     TreeNode<XWindow> root = CharSource.wrap(result.getStdoutString()).readLines(new XwininfoXwindowParser());
-                    final @Nullable XWindow match = Iterables.find(root, evaluator, null);
+                    //noinspection StaticPseudoFunctionalStyleMethod
+                    final @Nullable XWindow match = Iterables.find(root, evaluator::test, null);
                     if (match != null) {
-                        TreeNode<XWindow> targetWindowNode = Iterables.find(TreeNode.Utils.<XWindow>traverser().breadthFirstTraversal(root), new Predicate<TreeNode<XWindow>>() {
-                            @Override
-                            public boolean apply(TreeNode<XWindow> input) {
-                                return match == input.getLabel();
-                            }
-                        });
+                        //noinspection StaticPseudoFunctionalStyleMethod
+                        TreeNode<XWindow> targetWindowNode = Iterables.find(Utils.<XWindow>traverser().breadthFirstTraversal(root), input -> match == checkNotNull(input).getLabel());
                         return resolve(targetWindowNode);
                     } else {
                         return continuePolling();
@@ -332,7 +328,7 @@ public class DefaultXvfbController implements XvfbController {
         protected abstract E parseWindow(String line, boolean root);
 
         @Override
-        public boolean processLine(String line) throws IOException {
+        public boolean processLine(@SuppressWarnings("NullableProblems") String line) throws IOException {
             if (line.trim().isEmpty()) {
                 return skip(line, "empty");
             }

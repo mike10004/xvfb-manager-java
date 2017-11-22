@@ -4,18 +4,15 @@
 package com.github.mike10004.xvfbmanager;
 
 import com.github.mike10004.xvfbmanager.Sleeper.DefaultSleeper;
-import com.google.common.base.Supplier;
 
 import javax.annotation.Nullable;
-
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
 import java.util.Iterator;
+import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Class that facilitates polling for an arbitrary condition. Polling is
@@ -143,6 +140,7 @@ public abstract class Poller<T> {
         return PollAnswers.getContinue();
     }
 
+    @SuppressWarnings("SameParameterValue")
     protected static <E> PollAnswer<E> abortPolling(@Nullable E value) {
         return value == null ? PollAnswers.getAbort() : new PollAnswer<>(PollAction.ABORT, value);
     }
@@ -365,6 +363,7 @@ public abstract class Poller<T> {
      *                  keep polling
      * @return the poller
      */
+    @SuppressWarnings("unused")
     public static Poller<Void> checking(final Supplier<Boolean> condition) {
         return new SimplePoller(condition);
     }

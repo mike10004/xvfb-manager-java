@@ -6,7 +6,6 @@
 package com.github.mike10004.xvfbmanager;
 
 import com.google.common.annotations.Beta;
-import com.google.common.base.Optional;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.io.ByteProcessor;
@@ -73,9 +72,10 @@ public interface Screenshot {
             return delegate.isEmpty();
         }
 
+        @SuppressWarnings("Guava")
         @Override
         @Beta
-        public Optional<Long> sizeIfKnown() {
+        public com.google.common.base.Optional<Long> sizeIfKnown() {
             return delegate.sizeIfKnown();
         }
 

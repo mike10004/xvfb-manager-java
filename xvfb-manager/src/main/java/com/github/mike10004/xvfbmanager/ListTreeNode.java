@@ -5,7 +5,6 @@
  */
 package com.github.mike10004.xvfbmanager;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -15,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -83,7 +83,7 @@ public class ListTreeNode<T> implements TreeNode<T> {
     public ListTreeNode<T> addChild(TreeNode<T> child) {
         List<TreeNode<T>> children_ = children;
         if (children_ instanceof ImmutableList) {
-            this.children = children_ = new ArrayList(children_);
+            this.children = children_ = new ArrayList<>(children_);
         }
         children_.add(child);
         child.setParent(this);
@@ -98,7 +98,7 @@ public class ListTreeNode<T> implements TreeNode<T> {
     @Override
     public Iterator<T> iterator() {
         Function<TreeNode<T>, T> labelGetter = TreeNode.Utils.labelFunction();
-        return Iterators.transform(TreeNode.Utils.<T>traverser().breadthFirstTraversal(this).iterator(), labelGetter);
+        return Iterators.transform(TreeNode.Utils.<T>traverser().breadthFirstTraversal(this).iterator(), labelGetter::apply);
     }
 
     @Override

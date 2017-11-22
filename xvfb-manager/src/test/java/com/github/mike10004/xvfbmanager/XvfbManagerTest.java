@@ -11,19 +11,21 @@ import com.github.mike10004.common.image.ImageInfos;
 import com.github.mike10004.nativehelper.Program;
 import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
 import com.github.mike10004.xvfbmanager.XvfbController.XWindow;
+import com.github.mike10004.xvfbmanager.XvfbManager.LoggingCallback;
 import com.github.mike10004.xvfbunittesthelp.Assumptions;
 import com.github.mike10004.xvfbunittesthelp.PackageManager;
 import com.github.mike10004.xvfbunittesthelp.XDiagnosticRule;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
@@ -39,8 +41,10 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Executors;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -61,19 +65,19 @@ public class XvfbManagerTest {
     @Rule
     public TemporaryFolder tmp = new TemporaryFolder();
 
-    @org.junit.Test
+    @Test
     public void toDisplayValue() {
         System.out.println("\ntoDisplayValue\n");
         assertEquals("display", ":123", XvfbManager.toDisplayValue(123));
     }
 
-    @org.junit.Test(expected=IllegalArgumentException.class)
+    @Test(expected=IllegalArgumentException.class)
     public void toDisplayValue_negative() {
         System.out.println("\ntoDisplayValue_negative\n");
         XvfbManager.toDisplayValue(-1);
     }
 
-    @org.junit.BeforeClass
+    @BeforeClass
     public static void checkPrerequisities() throws IOException {
         PackageManager packageManager = PackageManager.getInstance();
         Iterable<String> requiredExecutables = Iterables.concat(Collections.singletonList("Xvfb"),
@@ -84,7 +88,7 @@ public class XvfbManagerTest {
         }
     }
 
-    @org.junit.BeforeClass
+    @BeforeClass
     public static void checkPnmSupport() throws Exception {
         Set<String> readerlessFormats = new HashSet<>();
         for (String formatName : new String[]{"PNM", "PPM", "PGM"}) {
@@ -96,7 +100,7 @@ public class XvfbManagerTest {
         checkState(readerlessFormats.isEmpty(), "empty readers list for %s", readerlessFormats);
     }
 
-    @org.junit.AfterClass
+    @AfterClass
     public static void checkLockFileAfterTests() throws Exception {
         File lockFile = XLockFileUtility.getInstance().constructLockFilePathname(":" + PRESUMABLY_VACANT_DISPLAY_NUM);
         if (lockFile.exists()) {
@@ -104,14 +108,14 @@ public class XvfbManagerTest {
         }
     }
 
-    @org.junit.Test
+    @Test
     public void start_autoDisplay_trueColor() throws Exception {
         System.out.println("\nstart_autoDisplay_trueColor\n");
         Assumptions.assumeTrue("xvfb version not high enough to test auto-display support", PackageManager.getInstance().queryAutoDisplaySupport());
         testWithConfigAndDisplay(new XvfbConfig("640x480x24"), null);
     }
 
-    @org.junit.Test
+    @Test
     public void start_specifiedDisplay_trueColor() throws Exception {
         System.out.println("\nstart_specifiedDisplay_trueColor\n");
         File lockFile = XLockFileUtility.getInstance().constructLockFilePathname(":" + PRESUMABLY_VACANT_DISPLAY_NUM);
@@ -169,7 +173,7 @@ public class XvfbManagerTest {
                 .outputToStrings();
         System.out.format("executing %s%n", imageMagickDisplay);
         ListenableFuture<ProgramWithOutputStringsResult> displayFuture = imageMagickDisplay.executeAsync(Executors.newSingleThreadExecutor());
-        Futures.addCallback(displayFuture, new XvfbManager.LoggingCallback("imagemagick-display", Charset.defaultCharset()), MoreExecutors.directExecutor());
+        Futures.addCallback(displayFuture, new LoggingCallback("imagemagick-display", Charset.defaultCharset()), MoreExecutors.directExecutor());
         return displayFuture;
     }
 
@@ -235,7 +239,7 @@ public class XvfbManagerTest {
         Spectrum spectrum = Rainbow4J.readSpectrum(image);
         List<ColorDistribution> colorDistributions = spectrum.getColorDistribution(1);
         System.out.format("%d color distribution elements%n", colorDistributions.size());
-        ColorDistribution blackDist = colorDistributions.stream().filter(forColor(Color.black)::apply).findFirst().orElse(null);
+        ColorDistribution blackDist = colorDistributions.stream().filter(forColor(Color.black)).findFirst().orElse(null);
         checkState(blackDist != null, "not enough black in image to evaluate blackness; must have at least 1% black");
         System.out.format("color distribution: %s %s%n", blackDist.getColor(), blackDist.getPercentage());
         checkState(blackDist.getColor().equals(Color.black), "only element in distribution list is not black: %s", blackDist.getColor());

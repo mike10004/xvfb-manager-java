@@ -3,12 +3,11 @@
  */
 package com.github.mike10004.xvfbmanager;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
-
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Predicate;
 
 /**
  * Interface for a class that controls a virtual framebuffer process.
@@ -59,6 +58,7 @@ public interface XvfbController extends Closeable {
      * @return the new environment map
      * @see #configureEnvironment(Map)
      */
+    @SuppressWarnings("unused")
     Map<String, String> newEnvironment();
 
     /**
