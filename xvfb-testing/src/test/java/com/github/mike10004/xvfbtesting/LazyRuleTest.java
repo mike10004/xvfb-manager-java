@@ -6,7 +6,9 @@ import com.github.mike10004.xvfbmanager.XvfbController;
 import com.github.mike10004.xvfbmanager.XvfbManager;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.github.mike10004.nativehelper.Platforms;
+import org.junit.After;
 import org.junit.Assume;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.File;
@@ -47,7 +49,7 @@ public class LazyRuleTest {
 
         @Override
         protected void use(XvfbController ctrl) throws Exception {
-            throw new IllegalStateException("this should never be called");
+            throw new IllegalStateException("this should never be called, only overridden by subclasses");
         }
     }
 
@@ -66,7 +68,7 @@ public class LazyRuleTest {
         Assume.assumeTrue("test can't run on windows", !windows);
         final AtomicInteger creationCalls = new AtomicInteger();
         XvfbManager manager = new ControllerCreationCountingManager(creationCalls);
-        XvfbRule rule = XvfbRule.builder().manager(manager).build();
+        XvfbRule rule = XvfbRule.builder().manager(manager).eager().build();
         new RuleUserThatDoesNotCallGetController(rule).test();
         assertEquals("creationCalls", 1, creationCalls.get());
     }
@@ -92,7 +94,7 @@ public class LazyRuleTest {
         Assume.assumeTrue("test can't run on windows", !windows);
         final AtomicInteger creationCalls = new AtomicInteger();
         XvfbManager manager = new ControllerCreationCountingManager(creationCalls);
-        final XvfbRule rule = XvfbRule.builder().manager(manager).build();
+        final XvfbRule rule = XvfbRule.builder().manager(manager).eager().build();
         new RuleUser(rule){
             @Override
             protected void use(XvfbController ctrl) throws Exception {
@@ -101,5 +103,47 @@ public class LazyRuleTest {
             }
         }.test();
         assertEquals("creationCalls", 1, creationCalls.get());
+    }
+
+    public static class LazyNoInvocationTest {
+
+        private final AtomicInteger creationCalls = new AtomicInteger();
+
+        @Rule
+        public final XvfbRule rule = XvfbRule.builder()
+                .manager(new ControllerCreationCountingManager(creationCalls))
+                .lazy().build();
+
+        @Test
+        public void testLazy_getControllerNeverCalled() throws Exception {
+            // do not invoke getController()
+            assertEquals("creationCalls", 0, creationCalls.get());
+        }
+
+        @After
+        public void checkCreationCalls() {
+            assertEquals("creationCalls", 0, creationCalls.get());
+        }
+    }
+
+    public static class EagerNoInvocationTest {
+
+        private final AtomicInteger creationCalls = new AtomicInteger();
+
+        @Rule
+        public final XvfbRule rule = XvfbRule.builder()
+                .manager(new ControllerCreationCountingManager(creationCalls))
+                .lazy().build();
+
+        @Test
+        public void testLazy_getControllerNeverCalled() throws Exception {
+            // do not invoke getController()
+            assertEquals("creationCalls", 1, creationCalls.get());
+        }
+
+        @After
+        public void checkCreationCalls() {
+            assertEquals("creationCalls", 1, creationCalls.get());
+        }
     }
 }

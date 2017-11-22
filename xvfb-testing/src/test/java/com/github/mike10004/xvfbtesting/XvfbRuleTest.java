@@ -3,13 +3,13 @@ package com.github.mike10004.xvfbtesting;
 import com.github.mike10004.nativehelper.Program;
 import com.github.mike10004.nativehelper.ProgramResult;
 import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
+import com.github.mike10004.xvfbmanager.TreeNode;
+import com.github.mike10004.xvfbmanager.XvfbController;
+import com.github.mike10004.xvfbmanager.XvfbController.XWindow;
 import com.github.mike10004.xvfbmanager.XwdFileScreenshot;
 import com.github.mike10004.xvfbmanager.XwdFileToPngConverter;
 import com.github.mike10004.xvfbunittesthelp.Assumptions;
 import com.github.mike10004.xvfbunittesthelp.PackageManager;
-import com.github.mike10004.xvfbmanager.TreeNode;
-import com.github.mike10004.xvfbmanager.XvfbController;
-import com.github.mike10004.xvfbmanager.XvfbController.XWindow;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.io.Files;
@@ -20,6 +20,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.BeforeClass;
 import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
@@ -39,7 +40,10 @@ import java.util.regex.Pattern;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class XvfbRuleTest {
 
@@ -84,7 +88,7 @@ public class XvfbRuleTest {
                         .outputToStrings()
                         .executeAsync(executor);
                 new PrintingCallback("xmessage").addTo(xmessageFuture);
-                TreeNode<XWindow> xmessageWindow = ctrl.pollForWindow(window -> window != null && "xmessage".equals(window.title), 250, 8).orNull();
+                TreeNode<XWindow> xmessageWindow = ctrl.pollForWindow(window -> window != null && "xmessage".equals(window.title), 250, 8).orElse(null);
                 System.out.format("xmessage window: %s%n", xmessageWindow);
                 assertNotNull("xmessage window", xmessageWindow);
                 System.out.format("%s%n", xmessageWindow.getLabel().line);
@@ -121,12 +125,12 @@ public class XvfbRuleTest {
 
     }
 
-    @org.junit.Test
+    @Test
     public void definedDisplayNumber() throws Exception {
         new XMessageTester(displayNumbers.incrementAndGet(), tmp.getRoot()).test();
     }
 
-    @org.junit.Test
+    @Test
     public void autoDisplayNumber() throws Exception {
         new XMessageTester(checkNotNull(tmp, "tmp is null here; very strange").getRoot()).test();
     }

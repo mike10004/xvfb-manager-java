@@ -1,8 +1,7 @@
 package com.github.mike10004.xvfbtesting;
 
-import com.github.mike10004.xvfbmanager.XvfbController;
-import com.google.common.base.Predicates;
 import com.github.mike10004.nativehelper.Platforms;
+import com.github.mike10004.xvfbmanager.XvfbController;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -20,13 +19,14 @@ public class WindowsXvfbRuleTest {
 
     @Test
     public void testDisablingOnWindows() throws Exception {
+        @SuppressWarnings("deprecation")
         XvfbRule rule = XvfbRule.builder().disabledOnWindows().build();
         new RuleUser(rule) {
             @Override
             protected void use(XvfbController ctrl) throws Exception {
                 assertEquals("display", null, ctrl.getDisplay());
                 assertNotNull("screenshooter", ctrl.getScreenshooter());
-                assertFalse("window", ctrl.pollForWindow(Predicates.alwaysTrue(), 1000, 10).isPresent());
+                assertFalse("window", ctrl.pollForWindow(x -> true, 1000, 10).isPresent());
 
                 // check that these do not throw exceptions
                 ctrl.waitUntilReady();

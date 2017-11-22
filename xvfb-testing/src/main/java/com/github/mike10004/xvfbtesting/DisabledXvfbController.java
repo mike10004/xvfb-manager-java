@@ -10,12 +10,13 @@ import com.github.mike10004.xvfbmanager.Screenshot;
 import com.github.mike10004.xvfbmanager.TreeNode;
 import com.github.mike10004.xvfbmanager.XvfbController;
 import com.github.mike10004.xvfbmanager.XvfbException;
-import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Predicate;
 
 class DisabledXvfbController implements XvfbController {
 
@@ -70,7 +71,7 @@ class DisabledXvfbController implements XvfbController {
 
     @Override
     public Map<String, String> newEnvironment() {
-        return configureEnvironment(new java.util.HashMap<>());
+        return configureEnvironment(new HashMap<>());
     }
 
     /**
@@ -87,11 +88,11 @@ class DisabledXvfbController implements XvfbController {
      * @param windowFinder the predicate
      * @param intervalMs the interval
      * @param maxPollAttempts the max poll attempts
-     * @return {@link Optional#absent()}
+     * @return {@link Optional#empty()}
      */
     @Override
     public Optional<TreeNode<XWindow>> pollForWindow(Predicate<XWindow> windowFinder, long intervalMs, int maxPollAttempts) {
-        return Optional.absent();
+        return Optional.empty();
     }
 
     /**
