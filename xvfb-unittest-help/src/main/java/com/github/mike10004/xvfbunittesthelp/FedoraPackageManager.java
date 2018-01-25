@@ -5,10 +5,9 @@
  */
 package com.github.mike10004.xvfbunittesthelp;
 
-import com.github.mike10004.nativehelper.Program;
-import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
+import com.github.mike10004.nativehelper.subprocess.ProcessResult;
+import com.github.mike10004.nativehelper.subprocess.Subprocess;
 import com.google.common.base.CharMatcher;
-import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
@@ -17,6 +16,7 @@ import com.google.common.io.LineProcessor;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -30,14 +30,13 @@ public class FedoraPackageManager extends PackageManager {
 
     protected Optional<String> checkInstalledPackageVersion(String packageName) throws IOException {
         checkArgument(!Strings.isNullOrEmpty(packageName));
-        ProgramWithOutputStringsResult result = Program.running("dnf")
+        ProcessResult<String, String> result = Processes.runOrDie(Subprocess.running("dnf")
                 .args("--cacheonly", "list", "installed", packageName)
-                .outputToStrings()
-                .execute();
-        if (result.getExitCode() == 0) {
-            return Optional.of(parseVersion(packageName, result.getStdoutString()));
+                .build());
+        if (result.exitCode() == 0) {
+            return Optional.of(parseVersion(packageName, result.content().stdout()));
         } else {
-            return Optional.absent();
+            return Optional.empty();
         }
     }
 

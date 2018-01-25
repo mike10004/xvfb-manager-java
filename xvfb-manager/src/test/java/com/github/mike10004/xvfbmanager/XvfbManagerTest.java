@@ -8,10 +8,11 @@ import com.galenframework.rainbow4j.Spectrum;
 import com.galenframework.rainbow4j.colorscheme.ColorDistribution;
 import com.github.mike10004.common.image.ImageInfo;
 import com.github.mike10004.common.image.ImageInfos;
-import com.github.mike10004.nativehelper.Program;
-import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
+import com.github.mike10004.nativehelper.subprocess.ProcessMonitor;
+import com.github.mike10004.nativehelper.subprocess.ProcessResult;
+import com.github.mike10004.nativehelper.subprocess.ProcessTracker;
+import com.github.mike10004.nativehelper.subprocess.Subprocess;
 import com.github.mike10004.xvfbmanager.XvfbController.XWindow;
-import com.github.mike10004.xvfbmanager.XvfbManager.LoggingCallback;
 import com.github.mike10004.xvfbunittesthelp.Assumptions;
 import com.github.mike10004.xvfbunittesthelp.PackageManager;
 import com.github.mike10004.xvfbunittesthelp.XDiagnosticRule;
@@ -19,10 +20,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.io.Files;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
-import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -43,12 +40,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.github.mike10004.nativehelper.Program.running;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -57,7 +53,10 @@ import static org.junit.Assert.assertTrue;
 
 public class XvfbManagerTest {
 
-    private static final int PRESUMABLY_VACANT_DISPLAY_NUM = 88;
+    private static final int _PRESUMABLY_VACANT_DISPLAY_NUM = 88;
+
+    @Rule
+    public ProcessTrackerRule processTrackerRule = new ProcessTrackerRule();
 
     @Rule
     public XDiagnosticRule diagnostic = Tests.isDiagnosticEnabled() ? new XDiagnosticRule() : XDiagnosticRule.getDisabledInstance();
@@ -100,11 +99,11 @@ public class XvfbManagerTest {
         checkState(readerlessFormats.isEmpty(), "empty readers list for %s", readerlessFormats);
     }
 
-    @AfterClass
-    public static void checkLockFileAfterTests() throws Exception {
-        File lockFile = XLockFileUtility.getInstance().constructLockFilePathname(":" + PRESUMABLY_VACANT_DISPLAY_NUM);
-        if (lockFile.exists()) {
-            System.out.format("WARNING: lock file exists after tests finished: %s%n", lockFile);
+    @Test
+    public void start_specifiedDisplay_trueColor() throws Exception {
+        System.out.println("\nstart_specifiedDisplay_trueColor\n");
+        try (XLockFileResource xlf = new XLockFileResource(_PRESUMABLY_VACANT_DISPLAY_NUM)) {
+            testWithConfigAndDisplay(new XvfbConfig("640x480x24"), xlf.getDisplayNum());
         }
     }
 
@@ -115,23 +114,18 @@ public class XvfbManagerTest {
         testWithConfigAndDisplay(new XvfbConfig("640x480x24"), null);
     }
 
-    @Test
-    public void start_specifiedDisplay_trueColor() throws Exception {
-        System.out.println("\nstart_specifiedDisplay_trueColor\n");
-        File lockFile = XLockFileUtility.getInstance().constructLockFilePathname(":" + PRESUMABLY_VACANT_DISPLAY_NUM);
-        checkState(!lockFile.exists(), "lock file already exists: %s", lockFile);
-        testWithConfigAndDisplay(new XvfbConfig("640x480x24"), PRESUMABLY_VACANT_DISPLAY_NUM);
-    }
-
     private void testWithConfigAndDisplay(XvfbConfig config, @Nullable Integer displayNumber) throws Exception {
         Assumptions.assumeTrue("imagemagick must be installed", PackageManager.getInstance().checkImageMagickInstalled());
         XvfbManager instance = new XvfbManager(config) {
             @Override
-            protected DisplayReadinessChecker createDisplayReadinessChecker(String display, File framebufferDir) {
-                return new DefaultDisplayReadinessChecker() {
+            protected DisplayReadinessChecker createDisplayReadinessChecker(ProcessTracker processTracker, String display, File framebufferDir) {
+                return new DefaultDisplayReadinessChecker(processTracker) {
                     @Override
-                    protected void executedCheckProgram(ProgramWithOutputStringsResult result) {
-                        System.out.format("readiness check: %s%n", result);
+                    protected void executedCheckProgram(ProcessResult<String, String> result) {
+                        System.out.format("readiness check:%n%s%n", result.content().stdout());
+                        if (result.exitCode() != 0) {
+                            System.err.println(result.content().stderr());
+                        }
                     }
                 };
             }
@@ -153,7 +147,7 @@ public class XvfbManagerTest {
         }
         String display = ctrl.getDisplay();
         System.out.format("xvfb is on display %s%n", display);
-        ListenableFuture<ProgramWithOutputStringsResult> graphicalProgramFuture = launchProgramOnDisplay(display, imageFile);
+        ProcessMonitor<String, String> graphicalProgramFuture = launchProgramOnDisplay(display, imageFile);
         String filename = imageFile.getName();
         final String expectedWindowName = "ImageMagick: " + filename;
         Optional<TreeNode<XWindow>> window = ctrl.pollForWindow(input -> input != null && expectedWindowName.equals(input.title), 250, 4);
@@ -163,18 +157,19 @@ public class XvfbManagerTest {
             Screenshot afterScreenshot = ctrl.getScreenshooter().capture();
             checkScreenshot(afterScreenshot, false, config);
         }
-        graphicalProgramFuture.cancel(true);
+        graphicalProgramFuture.destructor().sendTermSignal().timeout(1, TimeUnit.SECONDS).kill();
     }
 
-    private ListenableFuture<ProgramWithOutputStringsResult> launchProgramOnDisplay(String display, File imageFile) throws URISyntaxException {
-        Program<ProgramWithOutputStringsResult> imageMagickDisplay = running("/usr/bin/display")
+    private ProcessMonitor<String, String> launchProgramOnDisplay(String display, File imageFile) {
+        Subprocess subprocess = Subprocess.running("/usr/bin/display")
                 .env("DISPLAY", display)
                 .arg(imageFile.getAbsolutePath())
-                .outputToStrings();
-        System.out.format("executing %s%n", imageMagickDisplay);
-        ListenableFuture<ProgramWithOutputStringsResult> displayFuture = imageMagickDisplay.executeAsync(Executors.newSingleThreadExecutor());
-        Futures.addCallback(displayFuture, new LoggingCallback("imagemagick-display", Charset.defaultCharset()), MoreExecutors.directExecutor());
-        return displayFuture;
+                .build();
+        System.out.format("executing %s%n", subprocess);
+        ProcessMonitor<String, String> imageMagickDisplayMonitor = subprocess.launcher(processTrackerRule.getTracker())
+                .outputStrings(Charset.defaultCharset())
+                .launch();
+        return imageMagickDisplayMonitor;
     }
 
     private static class ScreenSpace {
@@ -217,7 +212,7 @@ public class XvfbManagerTest {
         checkState(screenshot instanceof XwdFileScreenshot, "not an ImageIO-readable screenshot: %s", screenshot);
         ImageioReadableScreenshot pngScreenshot;
         try {
-            pngScreenshot = new XwdFileToPngConverter(tmp.newFolder().toPath()).convert(screenshot);
+            pngScreenshot = new XwdFileToPngConverter(processTrackerRule.getTracker(), tmp.newFolder().toPath()).convert(screenshot);
         } catch (IOException e) {
             Throwable cause = e;
             while (cause != null) {

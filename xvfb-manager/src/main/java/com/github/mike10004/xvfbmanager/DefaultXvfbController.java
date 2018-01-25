@@ -3,9 +3,10 @@
  */
 package com.github.mike10004.xvfbmanager;
 
-import com.github.mike10004.nativehelper.Program;
-import com.github.mike10004.nativehelper.ProgramWithOutputResult;
-import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
+import com.github.mike10004.nativehelper.subprocess.ProcessMonitor;
+import com.github.mike10004.nativehelper.subprocess.ProcessResult;
+import com.github.mike10004.nativehelper.subprocess.ProcessTracker;
+import com.github.mike10004.nativehelper.subprocess.Subprocess;
 import com.github.mike10004.xvfbmanager.Poller.PollOutcome;
 import com.github.mike10004.xvfbmanager.Poller.StopReason;
 import com.github.mike10004.xvfbmanager.TreeNode.Utils;
@@ -26,7 +27,7 @@ import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
@@ -34,6 +35,7 @@ import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Default controller implementation. This implementation relies on a {@link ListenableFuture future}
@@ -63,9 +65,9 @@ public class DefaultXvfbController implements XvfbController {
     public static final int DEFAULT_MAX_NUM_POLLS = 8;
 
     protected static final long LOCK_FILE_CLEANUP_POLL_INTERVAL_MS = 100;
-    protected static final long LOCK_FILE_CLEANUP_TIMEOUT_MS = 500;
+    protected static final long LOCK_FILE_CLEANUP_TIMEOUT_MS = 1000;
 
-    private final ListenableFuture<? extends ProgramWithOutputResult> xvfbFuture;
+    private final ProcessMonitor<?, ?> xvfbMonitor;
     private final String display;
     private final DisplayReadinessChecker displayReadinessChecker;
     private final XLockFileChecker lockFileChecker;
@@ -73,17 +75,17 @@ public class DefaultXvfbController implements XvfbController {
     private final Sleeper sleeper;
     private final AtomicBoolean abort;
 
-    public DefaultXvfbController(ListenableFuture<? extends ProgramWithOutputResult> xvfbFuture, String display,
+    public DefaultXvfbController(ProcessMonitor<?, ?> xvfbMonitor, String display,
                                  DisplayReadinessChecker displayReadinessChecker,
                                  Screenshooter<?> screenshooter, Sleeper sleeper) {
-        this(xvfbFuture, display, displayReadinessChecker, screenshooter, sleeper, new PollingXLockFileChecker(LOCK_FILE_CLEANUP_POLL_INTERVAL_MS, sleeper));
+        this(xvfbMonitor, display, displayReadinessChecker, screenshooter, sleeper, new PollingXLockFileChecker(LOCK_FILE_CLEANUP_POLL_INTERVAL_MS, sleeper));
     }
 
     @VisibleForTesting
-    protected DefaultXvfbController(ListenableFuture<? extends ProgramWithOutputResult> xvfbFuture, String display,
+    protected DefaultXvfbController(ProcessMonitor<?, ?> xvfbMonitor, String display,
                                     DisplayReadinessChecker displayReadinessChecker,
                                     Screenshooter<?> screenshooter, Sleeper sleeper, XLockFileChecker lockFileChecker) {
-        this.xvfbFuture = checkNotNull(xvfbFuture);
+        this.xvfbMonitor = requireNonNull(xvfbMonitor);
         this.display = checkNotNull(display);
         this.displayReadinessChecker = checkNotNull(displayReadinessChecker);
         this.screenshooter = checkNotNull(screenshooter);
@@ -124,30 +126,22 @@ public class DefaultXvfbController implements XvfbController {
         return abort.get();
     }
 
-    private String formatXvfbExitedMessage(ProgramWithOutputResult result) {
+    private String formatXvfbExitedMessage(ProcessResult<?, ?> result) {
         String info = null;
-        if (result.getExitCode() != 0) {
-            if (result instanceof ProgramWithOutputStringsResult) {
-                info = ((ProgramWithOutputStringsResult)result).getStderrString();
-            } else {
-                try {
-                    info = result.getStderr().asCharSource(Charset.defaultCharset()).read();
-                } catch (IOException e) {
-                    info = result.toString();
-                }
-            }
+        if (result.exitCode() != 0) {
+            info = result.toString();
         }
-        return "xvfb already exited with code " + result.getExitCode() + (info == null ? "" : ": " + info);
+        return "xvfb already exited with code " + result.exitCode() + (info == null ? "" : ": " + info);
     }
 
     private boolean isXvfbAlreadyDone() {
-        if (xvfbFuture.isDone()) {
+        if (xvfbMonitor.future().isDone()) {
             try {
-                ProgramWithOutputResult result = xvfbFuture.get();
+                ProcessResult<?, ?> result = xvfbMonitor.await();
                 String message = formatXvfbExitedMessage(result);
                 log.error(message);
-            } catch (ExecutionException | InterruptedException e) {
-                throw new IllegalStateException("Future.get() should return immediately if Future.isDone() is true", e);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException("ProcessMonitor.await() should return immediately if Future.isDone() is true", e);
             }
             return true;
         } else {
@@ -175,10 +169,12 @@ public class DefaultXvfbController implements XvfbController {
         }
     }
 
+    private static final int SIGTERM_TIMEOUT_MILLIS = 500;
+
     @Override
     public void stop() {
-        if (!xvfbFuture.isDone()) {
-            xvfbFuture.cancel(true);
+        if (xvfbMonitor.process().isAlive()) {
+            xvfbMonitor.destructor().sendTermSignal().timeout(SIGTERM_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS).kill();
             waitForXLockFileCleanup();
         }
     }
@@ -231,7 +227,7 @@ public class DefaultXvfbController implements XvfbController {
 
     @Override
     public Optional<TreeNode<XWindow>> pollForWindow(java.util.function.Predicate<XWindow> windowFinder, long intervalMs, int maxPollAttempts) throws InterruptedException {
-        XWindowPoller poller = new XWindowPoller(display, windowFinder);
+        XWindowPoller poller = new XWindowPoller(xvfbMonitor.tracker(), display, windowFinder);
         PollOutcome<TreeNode<XWindow>> pollResult = poller.poll(intervalMs, maxPollAttempts);
         return Optional.ofNullable(pollResult.content);
     }
@@ -248,23 +244,38 @@ public class DefaultXvfbController implements XvfbController {
 
         private final String display;
         private final java.util.function.Predicate<XWindow> evaluator;
+        private final ProcessTracker processTracker;
 
-        public XWindowPoller(String display, java.util.function.Predicate<XWindow> evaluator) {
+        public XWindowPoller(ProcessTracker processTracker, String display, java.util.function.Predicate<XWindow> evaluator) {
             super();
+            this.processTracker = requireNonNull(processTracker);
             this.display = checkNotNull(display);
             this.evaluator = checkNotNull(evaluator);
         }
 
+        private static final int XWININFO_SIGTERM_TIMEOUT_MILLIS = 1000;
+
         @Override
         protected PollAnswer<TreeNode<XWindow>> check(int pollAttemptsSoFar) {
-            ProgramWithOutputStringsResult result = Program.running(PROG_XWININFO)
+            ProcessMonitor<String, String> xwininfoMonitor = Subprocess.running(PROG_XWININFO)
                     .args("-display", display)
                     .args("-root", "-tree")
-                    .outputToStrings()
-                    .execute();
-            if (result.getExitCode() == 0) {
+                    .build()
+                    .launcher(processTracker)
+                    .outputStrings(Charset.defaultCharset()) // presumably writes in system charset
+                    .launch();
+            ProcessResult<String, String> result = null;
+            try {
+                result = xwininfoMonitor.await();
+            } catch (InterruptedException e) {
+                log.error("interrupted while waiting for xwininfo result", e);
+                xwininfoMonitor.destructor().sendTermSignal()
+                        .timeout(XWININFO_SIGTERM_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
+                        .kill();
+            }
+            if (result != null && result.exitCode() == 0) {
                 try {
-                    TreeNode<XWindow> root = CharSource.wrap(result.getStdoutString()).readLines(new XwininfoXwindowParser());
+                    TreeNode<XWindow> root = CharSource.wrap(result.content().stdout()).readLines(new XwininfoXwindowParser());
                     //noinspection StaticPseudoFunctionalStyleMethod
                     final @Nullable XWindow match = Iterables.find(root, evaluator::test, null);
                     if (match != null) {

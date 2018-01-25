@@ -5,9 +5,8 @@
  */
 package com.github.mike10004.xvfbunittesthelp;
 
-import com.github.mike10004.nativehelper.Program;
-import com.github.mike10004.nativehelper.ProgramWithOutputStrings;
-import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
+import com.github.mike10004.nativehelper.subprocess.ProcessResult;
+import com.github.mike10004.nativehelper.subprocess.Subprocess;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 
@@ -26,25 +25,24 @@ class DebianPackageManager extends PackageManager {
     }
 
     private static final String STATUS_VERSION_DELIM = " ";
-    private static final Splitter STATUS_VERSION_SPLIITER = Splitter.on(STATUS_VERSION_DELIM).trimResults().omitEmptyStrings();
+    private static final Splitter STATUS_VERSION_SPLITTER = Splitter.on(STATUS_VERSION_DELIM).trimResults().omitEmptyStrings();
 
-    protected ProgramWithOutputStrings buildDpkgShowProgram(String packageName) {
-        return Program.running("dpkg-query")
+    protected Subprocess buildDpkgShowProgram(String packageName) {
+        return Subprocess.running("dpkg-query")
                 .arg("--show")
                 .args("--showformat", "${db:Status-Abbrev}" + STATUS_VERSION_DELIM + "${Version}")
                 .arg(packageName)
-                .outputToStrings();
+                .build();
     }
 
     @Override
     public boolean queryPackageInstalled(String packageName) {
         try {
-            ProgramWithOutputStringsResult result = buildDpkgShowProgram(packageName)
-                    .execute();
-            boolean clean = result.getExitCode() == 0;
-            log.log(clean ? Level.FINER : Level.INFO, "{0} {1}", new Object[]{result.getExitCode(), clean ? result.getStdoutString() : result.getStderrString()});
+            ProcessResult<String, String> result = Processes.runOrDie(buildDpkgShowProgram(packageName));
+            boolean clean = result.exitCode() == 0;
+            log.log(clean ? Level.FINER : Level.INFO, "{0} {1}", new Object[]{result.exitCode(), clean ? result.content().stdout() : result.content().stderr()});
             if (clean) {
-                String status = STATUS_VERSION_SPLIITER.split(result.getStdoutString()).iterator().next();
+                String status = STATUS_VERSION_SPLITTER.split(result.content().stdout()).iterator().next();
                 return "ii".equals(status);
             } else {
                 return false;
@@ -57,11 +55,10 @@ class DebianPackageManager extends PackageManager {
 
     @Override
     public String queryPackageVersion(String packageName) throws IOException {
-        ProgramWithOutputStringsResult result = buildDpkgShowProgram(packageName)
-                .execute();
-        if (result.getExitCode() == 0) {
-            String stdout = result.getStdoutString();
-            List<String> stdoutParts = STATUS_VERSION_SPLIITER.splitToList(stdout);
+        ProcessResult<String, String> result = Processes.runOrDie(buildDpkgShowProgram(packageName));
+        if (result.exitCode() == 0) {
+            String stdout = result.content().stdout();
+            List<String> stdoutParts = STATUS_VERSION_SPLITTER.splitToList(stdout);
             String status = stdoutParts.get(0), version = stdoutParts.get(1);
             if ("ii".equals(status)) {
                 return version;

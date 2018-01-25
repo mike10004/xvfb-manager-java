@@ -3,12 +3,11 @@
  */
 package com.github.mike10004.xvfbmanager;
 
-import com.github.mike10004.nativehelper.Program;
-import com.github.mike10004.nativehelper.ProgramResult;
-import com.github.mike10004.nativehelper.ProgramWithOutputFiles;
-import com.github.mike10004.nativehelper.ProgramWithOutputFilesResult;
-import com.github.mike10004.nativehelper.ProgramWithOutputResult;
 import com.github.mike10004.nativehelper.Whicher;
+import com.github.mike10004.nativehelper.subprocess.ProcessMonitor;
+import com.github.mike10004.nativehelper.subprocess.ProcessResult;
+import com.github.mike10004.nativehelper.subprocess.ProcessTracker;
+import com.github.mike10004.nativehelper.subprocess.Subprocess;
 import com.github.mike10004.xvfbmanager.Poller.PollOutcome;
 import com.github.mike10004.xvfbmanager.Poller.StopReason;
 import com.google.common.base.Suppliers;
@@ -17,14 +16,8 @@ import com.google.common.io.CharSource;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.gson.ExclusionStrategy;
-import com.google.gson.FieldAttributes;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,14 +30,12 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Class that helps manage the creation of virtual framebuffer processes.
@@ -52,17 +43,20 @@ import static com.google.common.base.Preconditions.checkState;
 public class XvfbManager {
 
     private static final Logger log = LoggerFactory.getLogger(XvfbManager.class);
+    private static final ProcessTracker GLOBAL_PROCESS_TRACKER = ProcessTracker.create();
+
     private static final int SCREEN = 0;
 
     private final Supplier<File> xvfbExecutableSupplier;
     private final XvfbConfig xvfbConfig;
+    private final ProcessTracker processTracker;
 
     /**
      * Constructs a default instance of the class.
      * @see #createXvfbExecutableResolver()
      */
     public XvfbManager() {
-        this(createXvfbExecutableResolver(), XvfbConfig.DEFAULT);
+        this(createXvfbExecutableResolver(), XvfbConfig.getDefault());
     }
 
     /**
@@ -91,26 +85,17 @@ public class XvfbManager {
      * @param xvfbConfig virtual framebuffer configuration
      */
     public XvfbManager(Supplier<File> xvfbExecutableSupplier, XvfbConfig xvfbConfig) {
-        this.xvfbExecutableSupplier = checkNotNull(xvfbExecutableSupplier);
-        this.xvfbConfig = checkNotNull(xvfbConfig);
+        this(xvfbExecutableSupplier, xvfbConfig, GLOBAL_PROCESS_TRACKER);
     }
 
-    /**
-     * Creates an executor service with a 2-thread pool and thread factory that creates daemon threads.
-     * @return the executor service
-     */
-    public static ExecutorService createDefaultExecutorService() {
-        return Executors.newFixedThreadPool(2, new ThreadFactory() {
+    public XvfbManager(ProcessTracker processTracker) {
+        this(createXvfbExecutableResolver(), XvfbConfig.getDefault(), processTracker);
+    }
 
-            private ThreadFactory defaultThreadFactory = Executors.defaultThreadFactory();
-
-            @Override
-            public Thread newThread(Runnable r) {
-                Thread t = defaultThreadFactory.newThread(r);
-                t.setDaemon(true);
-                return t;
-            }
-        });
+    public XvfbManager(Supplier<File> xvfbExecutableSupplier, XvfbConfig xvfbConfig, ProcessTracker processTracker) {
+        this.xvfbExecutableSupplier = checkNotNull(xvfbExecutableSupplier);
+        this.xvfbConfig = checkNotNull(xvfbConfig);
+        this.processTracker = requireNonNull(processTracker);
     }
 
     protected static String toDisplayValue(int displayNumber) {
@@ -151,12 +136,35 @@ public class XvfbManager {
         return Sleeper.DefaultSleeper.getInstance();
     }
 
-    protected DisplayReadinessChecker createDisplayReadinessChecker(String display, File framebufferDir) {
-        return new DefaultDisplayReadinessChecker();
+    protected DisplayReadinessChecker createDisplayReadinessChecker(ProcessTracker tracker, String display, File framebufferDir) {
+        return new DefaultDisplayReadinessChecker(tracker);
     }
 
-    protected DefaultXvfbController createController(ListenableFuture<? extends ProgramWithOutputResult> future, String display, File framebufferDir) {
-        return new DefaultXvfbController(future, display, createDisplayReadinessChecker(display, framebufferDir), createScreenshooter(display, framebufferDir), createSleeper());
+    protected DefaultXvfbController createController(ProcessMonitor<File, File> future, String display, File framebufferDir) {
+        return new DefaultXvfbController(future, display, createDisplayReadinessChecker(processTracker, display, framebufferDir), createScreenshooter(display, framebufferDir), createSleeper());
+    }
+
+    /**
+     * Starts Xvfb on the specified display using the specified executor service, writing temp
+     * files to the specified directory.
+     * @param displayNumber the display number
+     * @param scratchDir the temp directory
+     * @return the process controller
+     * @throws IOException if the files and directories the process requires cannot be created or written to
+     */
+    public XvfbController start(int displayNumber, Path scratchDir) throws IOException {
+        return doStart(displayNumber, nonDeletingExistingDirectoryProvider(scratchDir));
+    }
+
+    /**
+     * Starts Xvfb on the specified display using the specified executor service. A directory for temp files
+     * is created and deleted when the process is stopped.
+     * @param displayNumber the display number
+     * @return the process controller
+     * @throws IOException if the files and directories the process requires cannot be created or written to
+     */
+    public XvfbController start(int displayNumber) throws IOException {
+        return doStart(displayNumber, newTempDirProvider(FileUtils.getTempDirectory().toPath()));
     }
 
     /**
@@ -166,108 +174,37 @@ public class XvfbManager {
      * @throws IOException if the files and directories the process requires cannot be created or written to
      */
     public XvfbController start() throws IOException {
-        return start(createDefaultExecutorService());
-    }
-
-    /**
-     * Starts Xvfb on the specified display number. A directory for temp files will be created and deleted
-     * when the process is stopped.
-     * @param displayNumber the display number
-     * @return the process controller
-     * @throws IOException if the files and directories the process requires cannot be created or written to
-     */
-    public XvfbController start(int displayNumber) throws IOException {
-        return start(displayNumber, createDefaultExecutorService());
-    }
-
-    /**
-     * Starts Xvfb on a vacant display, writing temp files to the specified directory.
-     * @param scratchDir the temp directory
-     * @return a controller for the process
-     * @throws IOException if the files and directories the process requires cannot be created or written to
-     */
-    public XvfbController start(Path scratchDir) throws IOException {
-        return start(scratchDir, createDefaultExecutorService());
-    }
-
-    /**
-     * Starts Xvfb on the specified display and writes temp files to the specified directory.
-     * @param displayNumber the display number
-     * @param scratchDir the temp directory
-     * @return the process controller
-     * @throws IOException if the files and directories the process requires cannot be created or written to
-     */
-    public XvfbController start(int displayNumber, Path scratchDir) throws IOException {
-        return start(displayNumber, scratchDir, createDefaultExecutorService());
-    }
-
-    /**
-     * Starts Xvfb on the specified display using the specified executor service, writing temp
-     * files to the specified directory.
-     * @param displayNumber the display number
-     * @param scratchDir the temp directory
-     * @param executorService the executor service
-     * @return the process controller
-     * @throws IOException if the files and directories the process requires cannot be created or written to
-     */
-    public XvfbController start(int displayNumber, Path scratchDir, ExecutorService executorService) throws IOException {
-        return doStart(displayNumber, nonDeletingExistingDirectoryProvider(scratchDir), executorService);
-    }
-
-    /**
-     * Starts Xvfb on the specified display using the specified executor service. A directory for temp files
-     * is created and deleted when the process is stopped.
-     * @param displayNumber the display number
-     * @param executorService the executor service
-     * @return the process controller
-     * @throws IOException if the files and directories the process requires cannot be created or written to
-     */
-    public XvfbController start(int displayNumber, ExecutorService executorService) throws IOException {
-        return doStart(displayNumber, newTempDirProvider(FileUtils.getTempDirectory().toPath()), executorService);
-    }
-
-    /**
-     * Starts Xvfb on a vacant display using the specified executor service. A directory for temp files
-     * is created and deleted when the process is stopped.
-     * @param executorService the executor service
-     * @return the process controller
-     * @throws IOException if the files and directories the process requires cannot be created or written to
-     */
-    public XvfbController start(ExecutorService executorService) throws IOException {
-        return doStart(null, newTempDirProvider(FileUtils.getTempDirectory().toPath()), executorService);
+        return doStart(null, newTempDirProvider(FileUtils.getTempDirectory().toPath()));
     }
 
     /**
      * Starts Xvfb on a vacant display using the specified executor service and writing temp files
      * to the given directory.
      * @param scratchDir the temp directory
-     * @param executorService the executor service
      * @return the process controller
      * @throws IOException if the files and directories the process requires cannot be created or written to
      */
-    public XvfbController start(Path scratchDir, ExecutorService executorService) throws IOException {
-        return doStart(null, nonDeletingExistingDirectoryProvider(scratchDir), executorService);
+    public XvfbController start(Path scratchDir) throws IOException {
+        return doStart(null, nonDeletingExistingDirectoryProvider(scratchDir));
     }
 
     /**
      * Starts Xvfb, maybe auto-selecting a display number.
      * @param displayNumber display number, or null to auto-select
      * @param scratchDirProvider provider of scratch directory
-     * @param executorService executor service
      * @return process controller
      * @throws IOException if the files and directories the process requires cannot be created or written to
      */
     private XvfbController doStart(final @Nullable Integer displayNumber,
-                                   ScratchDirProvider scratchDirProvider,
-                                   ExecutorService executorService) throws IOException {
+                                   ScratchDirProvider scratchDirProvider) throws IOException {
         String display = null;
         final boolean AUTO_DISPLAY = displayNumber == null;
-        Program.Builder pb;
+        Subprocess.Builder pb;
         File xvfbExecutable = xvfbExecutableSupplier.get();
         if (xvfbExecutable == null) {
-            pb = Program.running("Xvfb");
+            pb = Subprocess.running("Xvfb");
         } else {
-            pb = Program.running(xvfbExecutable);
+            pb = Subprocess.running(xvfbExecutable);
         }
         if (AUTO_DISPLAY) {
             pb.args("-displayfd", String.valueOf(DISPLAY_RECEIVER_FD));
@@ -281,23 +218,26 @@ public class XvfbManager {
         pb.args("-fbdir", framebufferDir.toAbsolutePath().toString());
         File stdoutFile = File.createTempFile("xvfb-stdout", ".txt", scratchDir.toFile());
         File stderrFile = File.createTempFile("xvfb-stderr", ".txt", scratchDir.toFile());
-        ProgramWithOutputFiles xvfb = pb.outputToFiles(stdoutFile, stderrFile);
-        log.trace("executing {}", xvfb);
-        ListenableFuture<ProgramWithOutputFilesResult> xvfbFuture = xvfb.executeAsync(executorService);
+        Subprocess xvfbSubprocess = pb.build();
+        log.trace("executing {}", xvfbSubprocess);
+        Subprocess.Launcher<File, File> launcher = xvfbSubprocess.launcher(processTracker)
+                .outputFiles(stdoutFile, stderrFile);
+        ProcessMonitor<File, File> xvfbMonitor = launcher.launch();
         Executor callbacker = getCallbackExecutor();
-        Futures.addCallback(xvfbFuture, new LoggingCallback("xvfb", XVFB_OUTPUT_CHARSET), callbacker);
+        Futures.addCallback(xvfbMonitor.future(), new LoggingCallback<>("xvfb"), callbacker);
         if (scratchDirProvider.isDeleteOnStop()) {
-            Futures.addCallback(xvfbFuture, new DirectoryDeletingCallback(scratchDir.toFile()), callbacker);
+            Futures.addCallback(xvfbMonitor.future(), new DirectoryDeletingCallback<>(scratchDir.toFile()), callbacker);
         }
         if (AUTO_DISPLAY) {
             File outputFileContainingDisplay = selectCorrespondingFile(DISPLAY_RECEIVER_FD, stdoutFile, stderrFile);
             int autoDisplayNumber = pollForDisplayNumber(Files.asCharSource(outputFileContainingDisplay, XVFB_OUTPUT_CHARSET));
             display = toDisplayValue(autoDisplayNumber);
         } else {
+            //noinspection ConstantConditions
             checkState(display != null, "display should have been set manually from %s", displayNumber);
         }
-        DefaultXvfbController controller = createController(xvfbFuture, display, framebufferDir.toFile());
-        Futures.addCallback(xvfbFuture, new AbortFlagSetter(controller), callbacker);
+        DefaultXvfbController controller = createController(xvfbMonitor, display, framebufferDir.toFile());
+        Futures.addCallback(xvfbMonitor.future(), new AbortFlagSetter<>(controller), callbacker);
         return controller;
     }
 
@@ -334,8 +274,9 @@ public class XvfbManager {
 
     protected static ScratchDirProvider nonDeletingExistingDirectoryProvider(final Path directory) {
         return new ScratchDirProvider() {
+
             @Override
-            public Path provideDirectory() throws IOException {
+            public Path provideDirectory() {
                 return directory;
             }
 
@@ -400,7 +341,7 @@ public class XvfbManager {
 
     }
 
-    private static class AbortFlagSetter implements FutureCallback<ProgramResult> {
+    private static class AbortFlagSetter<T> implements FutureCallback<ProcessResult<T, T>> {
 
         private final DefaultXvfbController xvfbController;
 
@@ -409,7 +350,7 @@ public class XvfbManager {
         }
 
         @Override
-        public void onSuccess(ProgramResult result) {
+        public void onSuccess(ProcessResult<T, T> result) {
         }
 
         @Override
@@ -430,22 +371,20 @@ public class XvfbManager {
         boolean checkReadiness(String display);
     }
 
-    static class LoggingCallback implements FutureCallback<ProgramWithOutputResult> {
+    static class LoggingCallback<T> implements FutureCallback<T> {
 
         private final String name;
-        private final Charset contentCharset;
 
-        public LoggingCallback(String name, Charset contentCharset) {
+        public LoggingCallback(String name) {
             this.name = name;
-            this.contentCharset = checkNotNull(contentCharset);
         }
 
         @Override
-        public void onSuccess(ProgramWithOutputResult result) {
-            if (result.getExitCode() != 0) {
-                log.info("{}: {}", summarize(result, contentCharset));
+        public void onSuccess(T result) {
+            if (result instanceof ProcessResult && ((ProcessResult)result).exitCode() != 0) {
+                log.info("{}: {}", name, result);
             } else {
-                log.debug("{}: {}", name, summarize(result, contentCharset));
+                log.debug("{}: {}", name, result);
             }
         }
 
@@ -458,28 +397,9 @@ public class XvfbManager {
             }
         }
 
-        private String summarize(ProgramWithOutputResult result, Charset charset) {
-            String stdout = "", stderr = "";
-            try {
-                stdout = result.getStdout().asCharSource(charset).read();
-            } catch (IOException e) {
-                log.info("failed to summarize stdout from {}" + result);
-            }
-            try {
-                stderr = result.getStderr().asCharSource(charset).read();
-            } catch (IOException e) {
-                log.info("failed to summarize stderr from {}" + result);
-            }
-            int abbreviatedLength = 128;
-            stdout = StringUtils.abbreviate(stdout, abbreviatedLength);
-            stderr = StringUtils.abbreviate(stderr, abbreviatedLength);
-            return String.format("%s: exit %d, stdout=\"%s\", stderr=\"%s\"", name, result.getExitCode(),
-                    StringEscapeUtils.escapeJava(stdout), StringEscapeUtils.escapeJava(stderr));
-        }
-
     }
 
-    static class DirectoryDeletingCallback implements FutureCallback<ProgramResult> {
+    static class DirectoryDeletingCallback<T> implements FutureCallback<ProcessResult<T, T>> {
 
         private final File directory;
 
@@ -488,7 +408,7 @@ public class XvfbManager {
         }
 
         @Override
-        public void onSuccess(@Nullable ProgramResult result) {
+        public void onSuccess(@Nullable ProcessResult<T, T> result) {
             deleteDirectory();
         }
 
@@ -507,5 +427,9 @@ public class XvfbManager {
                 }
             }
         }
+    }
+
+    public ProcessTracker getProcessTracker() {
+        return processTracker;
     }
 }

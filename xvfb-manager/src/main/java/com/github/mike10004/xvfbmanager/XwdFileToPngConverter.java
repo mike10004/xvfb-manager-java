@@ -5,9 +5,10 @@
  */
 package com.github.mike10004.xvfbmanager;
 
-import com.github.mike10004.nativehelper.Program;
-import com.github.mike10004.nativehelper.ProgramResult;
-import com.github.mike10004.nativehelper.ProgramWithOutputFiles;
+import com.github.mike10004.nativehelper.subprocess.ProcessMonitor;
+import com.github.mike10004.nativehelper.subprocess.ProcessResult;
+import com.github.mike10004.nativehelper.subprocess.ProcessTracker;
+import com.github.mike10004.nativehelper.subprocess.Subprocess;
 import com.github.mike10004.xvfbmanager.Screenshot.FileByteSource;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.ByteSource;
@@ -25,8 +26,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Screenshot implementation that uses an X utility to convert a screenshot
@@ -40,10 +43,12 @@ public class XwdFileToPngConverter implements ScreenshotConverter<Screenshot, Im
 
     private static final ImmutableSet<String> requiredPrograms = ImmutableSet.of(PROG_XWDTOPNM);
 
+    private final ProcessTracker processTracker;
     private final Path tempDir;
 
-    public XwdFileToPngConverter(Path tempDir) {
+    public XwdFileToPngConverter(ProcessTracker processTracker, Path tempDir) {
         this.tempDir = checkNotNull(tempDir);
+        this.processTracker = requireNonNull(processTracker);
     }
 
     @Override
@@ -99,15 +104,23 @@ public class XwdFileToPngConverter implements ScreenshotConverter<Screenshot, Im
         if (inputFile.length() <= 0) {
             throw new IOException("input file is empty: " + inputFile);
         }
-        ProgramWithOutputFiles xwdtopnm = Program.running(PROG_XWDTOPNM)
+        ProcessMonitor<File, File> xwdtopnm = Subprocess.running(PROG_XWDTOPNM)
                 .args("-")
-                .reading(inputFile)
-                .outputToFiles(pnmFile, stderrFile);
-        ProgramResult result = xwdtopnm.execute();
+                .build()
+                .launcher(processTracker)
+                .outputFiles(pnmFile, stderrFile, Files.asByteSource(inputFile))
+                .launch();
+        ProcessResult<File, File> result = null;
+        try {
+            result = xwdtopnm.await();
+        } catch (InterruptedException e) {
+            ProcessKilling.termOrKill(xwdtopnm.destructor(), 250, TimeUnit.MILLISECONDS);
+            throw new IOException("interrupted while waiting for xwdtopnm to finish", e);
+        }
         log.debug("xwdtopnm: {}", result);
-        if (result.getExitCode() != 0) {
-            String stderrText = com.google.common.io.Files.toString(stderrFile, Charset.defaultCharset());
-            throw new IOException("xwdtopnm failed with exit code " + result.getExitCode() + ": " + StringUtils.abbreviate(stderrText, 256));
+        if (result.exitCode() != 0) {
+            String stderrText = Files.asCharSource(stderrFile, Charset.defaultCharset()).read();
+            throw new IOException("xwdtopnm failed with exit code " + result.exitCode() + ": " + StringUtils.abbreviate(stderrText, 256));
         }
         byte[] pngBytes = convertPnmToPng(Files.asByteSource(pnmFile));
         return new ImageioReadableScreenshot(ByteSource.wrap(pngBytes));

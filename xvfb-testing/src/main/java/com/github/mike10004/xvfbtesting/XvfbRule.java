@@ -4,19 +4,24 @@
 package com.github.mike10004.xvfbtesting;
 
 import com.github.mike10004.nativehelper.Platforms;
+import com.github.mike10004.nativehelper.subprocess.ProcessTracker;
 import com.github.mike10004.xvfbmanager.XvfbController;
 import com.github.mike10004.xvfbmanager.XvfbException;
 import com.github.mike10004.xvfbmanager.XvfbManager;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.junit.rules.ExternalResource;
 import org.junit.rules.TemporaryFolder;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -80,6 +85,44 @@ public class XvfbRule extends ExternalResource {
         };
     }
 
+    private static class EmbeddedProcessTracker implements ProcessTracker {
+
+        private final Set<Process> processes = new HashSet<>();
+
+        @Override
+        public synchronized void add(Process process) {
+            processes.add(process);
+        }
+
+        @Override
+        public synchronized boolean remove(Process process) {
+            return processes.remove(process);
+        }
+
+        @Override
+        public synchronized int activeCount() {
+            return processes.size();
+        }
+
+        public void destroyAll() {
+            Set<Process> processes = ImmutableSet.copyOf(this.processes);
+            for (Process p : processes) {
+                if (p.isAlive()) {
+                    p.destroy();
+                    try {
+                        p.waitFor(250, TimeUnit.MILLISECONDS);
+                    } catch (InterruptedException e) {
+                        LoggerFactory.getLogger(XvfbRule.class).info("interrupted while waiting for process to terminate");
+                    }
+                    if (p.isAlive()) {
+                        p.destroyForcibly();
+                    }
+                }
+            }
+
+        }
+    }
+
     /**
      * Builder class for rule instances.
      * @see XvfbRule
@@ -88,7 +131,7 @@ public class XvfbRule extends ExternalResource {
 
         private static Supplier<Boolean> DISABLED_ON_WINDOWS = () -> Platforms.getPlatform().isWindows();
 
-        private XvfbManager xvfbManager = new XvfbManager();
+        private XvfbManager xvfbManager = new XvfbManager(new EmbeddedProcessTracker());
         private Set<Supplier<Boolean>> disabledSuppliers = new LinkedHashSet<>();
         private @Nullable Integer displayNumber;
         private TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -261,6 +304,10 @@ public class XvfbRule extends ExternalResource {
             xvfbController_.stop();
         }
         temporaryFolder.delete();
+        ProcessTracker tracker = xvfbManager.getProcessTracker();
+        if (tracker instanceof EmbeddedProcessTracker) {
+            ((EmbeddedProcessTracker) tracker).destroyAll();
+        }
     }
 
     /**

@@ -3,8 +3,10 @@
  */
 package com.github.mike10004.xvfbmanager;
 
-import com.github.mike10004.nativehelper.Program;
-import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
+import com.github.mike10004.nativehelper.subprocess.ProcessMonitor;
+import com.github.mike10004.nativehelper.subprocess.ProcessResult;
+import com.github.mike10004.nativehelper.subprocess.ProcessTracker;
+import com.github.mike10004.nativehelper.subprocess.Subprocess;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -12,8 +14,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Implementation of a screenshooter that executes an X utility.
@@ -33,10 +38,12 @@ public class XwdScreenshooter implements Screenshooter<XwdFileScreenshot> {
 
     private static final Logger log = LoggerFactory.getLogger(XwdScreenshooter.class);
 
+    private final ProcessTracker processTracker;
     private final String display;
     private final File outputDir;
 
-    public XwdScreenshooter(String display, File outputDir) {
+    public XwdScreenshooter(ProcessTracker processTracker, String display, File outputDir) {
+        this.processTracker = requireNonNull(processTracker);
         this.display = checkNotNull(display);
         this.outputDir = checkNotNull(outputDir);
     }
@@ -44,14 +51,24 @@ public class XwdScreenshooter implements Screenshooter<XwdFileScreenshot> {
     @Override
     public XwdFileScreenshot capture() throws IOException, XvfbException {
         File xwdFile = File.createTempFile("screenshot", ".xwd", outputDir);
-        ProgramWithOutputStringsResult xwdResult = Program.running(PROG_XWD)
+        ProcessMonitor<String, String> xwdMonitor = Subprocess.running(PROG_XWD)
                 .args("-display", display, "-root", "-silent", "-out", xwdFile.getAbsolutePath())
-                .outputToStrings()
-                .execute();
+                .build()
+                .launcher(processTracker)
+                .outputStrings(Charset.defaultCharset()) // xwd presumably uses platform charset
+                .launch();
+        ProcessResult<String, String> xwdResult;
+        try {
+            xwdResult = xwdMonitor.await();
+        } catch (InterruptedException e) {
+            log.error("interrupted while waiting for " + PROG_XWD, e);
+            ProcessKilling.termOrKill(xwdMonitor.destructor(), 100, TimeUnit.MILLISECONDS);
+            throw new ScreenshooterException("failed to take screenshot due to interruption", e);
+        }
         log.debug("xwd process finished: {}", xwdResult);
-        String stderrText = StringUtils.abbreviate(xwdResult.getStderrString(), 512);
-        if (xwdResult.getExitCode() != 0) {
-            throw new ScreenshooterException("xwd failed with code " + xwdResult.getExitCode() + " and stderr: " + stderrText);
+        String stderrText = StringUtils.abbreviate(xwdResult.content().stderr(), 512);
+        if (xwdResult.exitCode() != 0) {
+            throw new ScreenshooterException("xwd failed with code " + xwdResult.exitCode() + " and stderr: " + stderrText);
         }
         return XwdFileScreenshot.from(xwdFile);
     }

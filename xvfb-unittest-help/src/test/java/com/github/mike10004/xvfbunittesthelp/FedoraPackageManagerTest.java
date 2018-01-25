@@ -1,11 +1,13 @@
 package com.github.mike10004.xvfbunittesthelp;
 
-import com.google.common.base.Optional;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import java.util.Optional;
+
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /*
  * (c) 2016 Mike Chaberski

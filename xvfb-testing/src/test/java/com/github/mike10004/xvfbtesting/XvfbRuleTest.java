@@ -1,8 +1,9 @@
 package com.github.mike10004.xvfbtesting;
 
-import com.github.mike10004.nativehelper.Program;
-import com.github.mike10004.nativehelper.ProgramResult;
-import com.github.mike10004.nativehelper.ProgramWithOutputStringsResult;
+import com.github.mike10004.nativehelper.subprocess.ProcessMonitor;
+import com.github.mike10004.nativehelper.subprocess.ProcessResult;
+import com.github.mike10004.nativehelper.subprocess.ProcessTracker;
+import com.github.mike10004.nativehelper.subprocess.Subprocess;
 import com.github.mike10004.xvfbmanager.TreeNode;
 import com.github.mike10004.xvfbmanager.XvfbController;
 import com.github.mike10004.xvfbmanager.XvfbController.XWindow;
@@ -15,7 +16,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.BeforeClass;
@@ -27,11 +27,9 @@ import javax.annotation.Nullable;
 import java.awt.Rectangle;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
@@ -39,7 +37,6 @@ import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -51,11 +48,14 @@ public class XvfbRuleTest {
     private static final AtomicInteger displayNumbers = new AtomicInteger(FIRST_DISPLAY_NUMBER);
     private static final boolean takeScreenshot = false;
 
+    private static ProcessTracker GLOBAL_PROCESS_TRACKER = ProcessTracker.create();
+
     @Rule
     public TemporaryFolder tmp = new TemporaryFolder();
 
     @BeforeClass
     public static void checkPrerequisities() throws IOException {
+        //noinspection ConstantConditions
         for (String program : Iterables.concat(Arrays.asList("Xvfb", "xdotool", "xmessage"), takeScreenshot ? ImmutableList.of("xwdtopnm") : ImmutableList.of())) {
             boolean installed = PackageManager.getInstance().queryCommandExecutable(program);
             System.out.format("%s executable? %s%n", program, installed);
@@ -80,47 +80,45 @@ public class XvfbRuleTest {
         @Override
         protected void use(XvfbController ctrl) throws Exception {
             ctrl.waitUntilReady(Tests.getReadinessPollIntervalMs(), Tests.getMaxReadinessPolls());
-            ExecutorService executor = Executors.newFixedThreadPool(2);
-            try {
-                ListenableFuture<ProgramWithOutputStringsResult> xmessageFuture = Program.running("/usr/bin/xmessage")
-                        .env("DISPLAY", ctrl.getDisplay())
-                        .args("-nearmouse", "-print", "hello, world")
-                        .outputToStrings()
-                        .executeAsync(executor);
-                new PrintingCallback("xmessage").addTo(xmessageFuture);
-                TreeNode<XWindow> xmessageWindow = ctrl.pollForWindow(window -> window != null && "xmessage".equals(window.title), 250, 8).orElse(null);
-                System.out.format("xmessage window: %s%n", xmessageWindow);
-                assertNotNull("xmessage window", xmessageWindow);
-                System.out.format("%s%n", xmessageWindow.getLabel().line);
-                Rectangle position = parsePosition(xmessageWindow.getLabel());
-                assertFalse(position.isEmpty());
-                assertTrue(position.x >= 0);
-                assertTrue(position.y >= 0);
-                int buttonX = position.x + 25;
-                int buttonY = position.y + 40;
-                System.out.println("executing xdotool to click 'okay' button");
-                ProgramWithOutputStringsResult xdotoolResult = Program.running("xdotool")
-                        .env("DISPLAY", ctrl.getDisplay())
-                        .args("mousemove", String.valueOf(buttonX), String.valueOf(buttonY), "click", "1")
-                        .outputToStrings()
-                        .execute();
-                System.out.format("xdotool: %s%n", xdotoolResult);
-                if (takeScreenshot) {
-                    System.out.println("capturing screenshot");
-                    File pngFile = new File("target", "post-xdotool-" + System.currentTimeMillis() + ".png");
-                    XwdFileScreenshot screenshot = (XwdFileScreenshot) ctrl.getScreenshooter().capture();
-                    new XwdFileToPngConverter(tempDir.toPath()).convert(screenshot).asByteSource().copyTo(Files.asByteSink(pngFile));
-                }
-                long getStart = System.currentTimeMillis();
-                ProgramWithOutputStringsResult xmessageResult = xmessageFuture.get(500, TimeUnit.MILLISECONDS);
-                long getEnd = System.currentTimeMillis();
-                System.out.format("waited %d milliseconds for xmessage to quit%n", getEnd - getStart);
-                assertEquals("xmessage exit code", 0, xmessageResult.getExitCode());
-                assertEquals("xmessage stdout", "okay", xmessageResult.getStdoutString().trim());
-            } finally {
-                List<Runnable> tasks = executor.shutdownNow();
-                checkState(tasks.isEmpty(), "did not expect any tasks to be awaiting execution");
+            ProcessMonitor<String, String> xmessageMonitor = Subprocess.running("/usr/bin/xmessage")
+                    .env("DISPLAY", ctrl.getDisplay())
+                    .args("-nearmouse", "-print", "hello, world")
+                    .build()
+                    .launcher(GLOBAL_PROCESS_TRACKER)
+                    .outputStrings(Charset.defaultCharset())
+                    .launch();
+            Futures.addCallback(xmessageMonitor.future(), new PrintingCallback<>("xmessage"), MoreExecutors.directExecutor());
+            TreeNode<XWindow> xmessageWindow = ctrl.pollForWindow(window -> window != null && "xmessage".equals(window.title), 250, 8).orElse(null);
+            System.out.format("xmessage window: %s%n", xmessageWindow);
+            assertNotNull("xmessage window", xmessageWindow);
+            System.out.format("%s%n", xmessageWindow.getLabel().line);
+            Rectangle position = parsePosition(xmessageWindow.getLabel());
+            assertFalse(position.isEmpty());
+            assertTrue(position.x >= 0);
+            assertTrue(position.y >= 0);
+            int buttonX = position.x + 25;
+            int buttonY = position.y + 40;
+            System.out.println("executing xdotool to click 'okay' button");
+            ProcessResult<String, String> xdotoolRslt = Subprocess.running("xdotool")
+                    .env("DISPLAY", ctrl.getDisplay())
+                    .args("mousemove", String.valueOf(buttonX), String.valueOf(buttonY), "click", "1")
+                    .build()
+                    .launcher(GLOBAL_PROCESS_TRACKER)
+                    .outputStrings(Charset.defaultCharset())
+                    .launch().await();
+            System.out.format("xdotool: %s%n", xdotoolRslt);
+            if (takeScreenshot) {
+                System.out.println("capturing screenshot");
+                File pngFile = new File("target", "post-xdotool-" + System.currentTimeMillis() + ".png");
+                XwdFileScreenshot screenshot = (XwdFileScreenshot) ctrl.getScreenshooter().capture();
+                new XwdFileToPngConverter(GLOBAL_PROCESS_TRACKER, tempDir.toPath()).convert(screenshot).asByteSource().copyTo(Files.asByteSink(pngFile));
             }
+            long getStart = System.currentTimeMillis();
+            ProcessResult<String, String> xmessageResult = xmessageMonitor.await(500, TimeUnit.MILLISECONDS);
+            long getEnd = System.currentTimeMillis();
+            System.out.format("waited %d milliseconds for xmessage to quit%n", getEnd - getStart);
+            assertEquals("xmessage exit code", 0, xmessageResult.exitCode());
+            assertEquals("xmessage stdout", "okay", xmessageResult.content().stdout().trim());
         }
 
     }
@@ -146,7 +144,7 @@ public class XvfbRuleTest {
         return new Rectangle(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(w), Integer.parseInt(h));
     }
 
-    private static class PrintingCallback implements FutureCallback<ProgramResult> {
+    private static class PrintingCallback<T> implements FutureCallback<T> {
 
         private final String name;
 
@@ -154,12 +152,8 @@ public class XvfbRuleTest {
             this.name = name;
         }
 
-        public void addTo(ListenableFuture<? extends ProgramResult> future) {
-            Futures.addCallback(future, this, MoreExecutors.directExecutor());
-        }
-
         @Override
-        public void onSuccess(@Nullable ProgramResult result) {
+        public void onSuccess(@Nullable T result) {
             System.out.format("%s: %s%n", name, result);
         }
 

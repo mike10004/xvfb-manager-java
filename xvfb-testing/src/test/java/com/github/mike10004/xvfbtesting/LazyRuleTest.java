@@ -1,11 +1,10 @@
 package com.github.mike10004.xvfbtesting;
 
-import com.github.mike10004.nativehelper.ProgramWithOutputResult;
+import com.github.mike10004.nativehelper.Platforms;
+import com.github.mike10004.nativehelper.subprocess.ProcessMonitor;
 import com.github.mike10004.xvfbmanager.DefaultXvfbController;
 import com.github.mike10004.xvfbmanager.XvfbController;
 import com.github.mike10004.xvfbmanager.XvfbManager;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.github.mike10004.nativehelper.Platforms;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Rule;
@@ -22,20 +21,21 @@ public class LazyRuleTest {
 
     private static boolean windows = Platforms.getPlatform().isWindows();
 
-    private static class ControllerCreationCountingManager extends XvfbManager {
+    static class ControllerCreationCountingManager extends XvfbManager {
         public final AtomicInteger controllerCreationCounter;
 
-        private ControllerCreationCountingManager(AtomicInteger controllerCreationCounter) {
+        public ControllerCreationCountingManager(AtomicInteger controllerCreationCounter) {
             this.controllerCreationCounter = controllerCreationCounter;
         }
 
         @Override
-        protected DefaultXvfbController createController(ListenableFuture<? extends ProgramWithOutputResult> future, String display, File framebufferDir) {
+        protected DefaultXvfbController createController(ProcessMonitor<File, File> future, String display, File framebufferDir) {
             controllerCreationCounter.incrementAndGet();
             return super.createController(future, display, framebufferDir);
         }
     }
 
+    @SuppressWarnings("RedundantThrows")
     private static class RuleUserThatDoesNotCallGetController extends RuleUser {
 
         public RuleUserThatDoesNotCallGetController(XvfbRule xvfb) {
@@ -81,7 +81,7 @@ public class LazyRuleTest {
         final XvfbRule rule = XvfbRule.builder().manager(manager).lazy().build();
         new RuleUser(rule){
             @Override
-            protected void use(XvfbController ctrl) throws Exception {
+            protected void use(XvfbController ctrl) {
                 checkState(ctrl != null);
                 assertSame("controller re-creation", rule.getController(), ctrl);
             }
@@ -97,7 +97,7 @@ public class LazyRuleTest {
         final XvfbRule rule = XvfbRule.builder().manager(manager).eager().build();
         new RuleUser(rule){
             @Override
-            protected void use(XvfbController ctrl) throws Exception {
+            protected void use(XvfbController ctrl) {
                 checkState(ctrl != null);
                 assertSame("controller re-creation", rule.getController(), ctrl);
             }
@@ -105,45 +105,4 @@ public class LazyRuleTest {
         assertEquals("creationCalls", 1, creationCalls.get());
     }
 
-    public static class LazyNoInvocationTest {
-
-        private final AtomicInteger creationCalls = new AtomicInteger();
-
-        @Rule
-        public final XvfbRule rule = XvfbRule.builder()
-                .manager(new ControllerCreationCountingManager(creationCalls))
-                .lazy().build();
-
-        @Test
-        public void testLazy_getControllerNeverCalled() throws Exception {
-            // do not invoke getController()
-            assertEquals("creationCalls", 0, creationCalls.get());
-        }
-
-        @After
-        public void checkCreationCalls() {
-            assertEquals("creationCalls", 0, creationCalls.get());
-        }
-    }
-
-    public static class EagerNoInvocationTest {
-
-        private final AtomicInteger creationCalls = new AtomicInteger();
-
-        @Rule
-        public final XvfbRule rule = XvfbRule.builder()
-                .manager(new ControllerCreationCountingManager(creationCalls))
-                .lazy().build();
-
-        @Test
-        public void testLazy_getControllerNeverCalled() throws Exception {
-            // do not invoke getController()
-            assertEquals("creationCalls", 1, creationCalls.get());
-        }
-
-        @After
-        public void checkCreationCalls() {
-            assertEquals("creationCalls", 1, creationCalls.get());
-        }
-    }
 }

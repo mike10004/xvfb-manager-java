@@ -1,5 +1,14 @@
 package com.github.mike10004.xvfbmanager;
 
+import com.github.mike10004.nativehelper.subprocess.ProcessMonitor;
+import com.github.mike10004.nativehelper.subprocess.ProcessResult;
+import com.github.mike10004.nativehelper.subprocess.ScopedProcessTracker;
+import com.github.mike10004.nativehelper.subprocess.Subprocess;
+import com.google.common.io.ByteSource;
+
+import javax.annotation.Nullable;
+import java.nio.charset.Charset;
+
 class Tests {
 
     private Tests() {}
@@ -21,4 +30,5 @@ class Tests {
     public static boolean isDiagnosticEnabled() {
         return Boolean.parseBoolean(System.getProperty(SYSPROP_TEST_XDIAGNOSTIC_ENABLED, "false"));
     }
+
 }
