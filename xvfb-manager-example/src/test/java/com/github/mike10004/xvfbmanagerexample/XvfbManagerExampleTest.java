@@ -4,15 +4,12 @@ import com.github.mike10004.xvfbunittesthelp.Assumptions;
 import com.github.mike10004.xvfbunittesthelp.PackageManager;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Resources;
-import com.google.common.net.HttpHeaders;
-import com.google.common.net.MediaType;
+import io.github.mike10004.nanochamp.server.NanoResponse;
+import io.github.mike10004.nanochamp.server.NanoServer;
+import io.github.mike10004.nanochamp.testing.NanoRule;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
-import org.mockserver.client.server.MockServerClient;
-import org.mockserver.junit.MockServerRule;
-import org.mockserver.model.HttpRequest;
-import org.mockserver.model.HttpResponse;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -21,13 +18,31 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.Arrays;
 
+import static org.apache.http.HttpStatus.SC_OK;
+
 public class XvfbManagerExampleTest {
 
     @Rule
     public TemporaryFolder tmp = new TemporaryFolder();
 
     @Rule
-    public MockServerRule mockServerRule = new MockServerRule(this);
+    public NanoRule nanoRule = new NanoRule(buildServer());
+
+    private static final String PAGE_PATH = "/";
+    private static final String CAT_PATH = PAGE_PATH + "cat.jpg";
+    private static final String PAGE_HTML = "<html><head><title>Example</title></head><body><img src=\"cat.jpg\"></body></html>";
+    private static NanoServer buildServer() {
+        byte[] imageBytes;
+        try {
+            imageBytes = Resources.toByteArray(XvfbManagerExample.class.getResource("/smiling-cat-in-public-domain.jpg"));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return NanoServer.builder()
+                .getPath(PAGE_PATH, NanoResponse.status(SC_OK).htmlUtf8(PAGE_HTML))
+                .getPath(CAT_PATH, NanoResponse.status(SC_OK).jpeg(imageBytes))
+                .build();
+    }
 
     @BeforeClass
     public static void checkPrequisites() throws IOException {
@@ -53,17 +68,8 @@ public class XvfbManagerExampleTest {
         runMainWithArgs("chrome");
     }
 
-    private static final String host = "localhost";
-
     private void runMainWithArgs(String browserKey) throws IOException, InterruptedException {
-        int port = mockServerRule.getPort().intValue();
-        MockServerClient server = new MockServerClient(host, port);
-        String path = "/";
-        String html = "<html><head><title>Example</title></head><body><img src=\"cat.jpg\"></body></html>";
-        byte[] imageBytes = Resources.toByteArray(XvfbManagerExample.class.getResource("/smiling-cat-in-public-domain.jpg"));
-        server.when(HttpRequest.request(path)).respond(HttpResponse.response(html).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.HTML_UTF_8.toString()));
-        server.when(HttpRequest.request(path + "cat.jpg")).respond(HttpResponse.response().withBody(imageBytes).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.JPEG.toString()));
-        URL url = new URL("http", host, port, path);
+        URL url = nanoRule.getControl().baseUri().toURL();
         File screenshotFile = tmp.newFile("screenshot.png");
         XvfbManagerExample.browseAndCaptureScreenshot(browserKey, url, screenshotFile);
         BufferedImage image = ImageIO.read(screenshotFile);
