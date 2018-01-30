@@ -104,7 +104,7 @@ public class XvfbManagerExampleTest {
 
     private void runMainWithArgs(String browserKey) throws IOException, InterruptedException {
         URL url = nanoRule.getControl().baseUri().toURL();
-        File screenshotFile = tmp.newFile("screenshot.png");
+        File screenshotFile = new File(tmp.getRoot(), "screenshot.png");
         XvfbManagerExample.browseAndCaptureScreenshot(browserKey, url, screenshotFile);
         BufferedImage image = ImageIO.read(screenshotFile);
         System.out.format("%dx%d screenshot saved to %s%n", image.getWidth(), image.getHeight(), screenshotFile);
