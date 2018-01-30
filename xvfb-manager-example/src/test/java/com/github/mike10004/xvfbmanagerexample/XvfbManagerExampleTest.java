@@ -65,43 +65,7 @@ public class XvfbManagerExampleTest {
         runMainWithArgs("firefox");
     }
 
-    @org.junit.Test
-    public void main_chrome() throws Exception {
-        Assumptions.assumeTrue("chrome or chromium must be installed", PackageManager.getInstance().queryAnyCommandExecutable(Arrays.asList("chromium-browser", "google-chrome")));
-        Predicate<Exception> isChromeCrashed = exception -> {
-            return exception instanceof WebDriverException
-                    && exception.getMessage() != null
-                    && exception.getMessage().contains("Chrome failed to start: crashed");
-        };
-        tryMultipleTimes(() -> {
-            runMainWithArgs("chrome");
-            return (Void) null;
-        }, 5, isChromeCrashed);
-
-    }
-
-    @SuppressWarnings({"SameParameterValue", "UnusedReturnValue"})
-    private static <T> T tryMultipleTimes(Callable<T> action, int maxNumTimes, Predicate<? super Exception> catchable) throws Exception {
-        int numTries = 0;
-        Exception lastCaught = null;
-        while (numTries < maxNumTimes) {
-            try {
-                return action.call();
-            } catch (Exception e) {
-                lastCaught = e;
-                if (catchable.test(e)) {
-                    System.err.format("%d: caught %s; maybe retrying%n", numTries, e);
-                }
-            } finally {
-                numTries++;
-            }
-        }
-        if (lastCaught != null) {
-            throw lastCaught;
-        }
-        throw new IllegalArgumentException("no exceptions caught");
-    }
-
+    @SuppressWarnings("SameParameterValue")
     private void runMainWithArgs(String browserKey) throws IOException, InterruptedException {
         URL url = nanoRule.getControl().baseUri().toURL();
         File screenshotFile = new File(tmp.getRoot(), "screenshot.png");
