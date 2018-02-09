@@ -1,13 +1,10 @@
 package com.github.mike10004.xvfbtesting;
 
-import com.github.mike10004.nativehelper.Platforms;
 import com.github.mike10004.nativehelper.subprocess.ProcessMonitor;
 import com.github.mike10004.xvfbmanager.DefaultXvfbController;
 import com.github.mike10004.xvfbmanager.XvfbController;
 import com.github.mike10004.xvfbmanager.XvfbManager;
-import org.junit.After;
-import org.junit.Assume;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import java.io.File;
@@ -19,7 +16,8 @@ import static org.junit.Assert.assertSame;
 
 public class LazyRuleTest {
 
-    private static boolean windows = Platforms.getPlatform().isWindows();
+    @ClassRule
+    public static PlatformRule platformRule = PlatformRule.requireNotWindows();
 
     static class ControllerCreationCountingManager extends XvfbManager {
         public final AtomicInteger controllerCreationCounter;
@@ -55,7 +53,6 @@ public class LazyRuleTest {
 
     @Test
     public void testLazy_noGetControllerCall() throws Exception {
-        Assume.assumeTrue("test can't run on windows", !windows);
         final AtomicInteger creationCalls = new AtomicInteger();
         XvfbManager manager = new ControllerCreationCountingManager(creationCalls);
         XvfbRule rule = XvfbRule.builder().manager(manager).lazy().build();
@@ -65,7 +62,6 @@ public class LazyRuleTest {
 
     @Test
     public void testEager_noGetControllerCall() throws Exception {
-        Assume.assumeTrue("test can't run on windows", !windows);
         final AtomicInteger creationCalls = new AtomicInteger();
         XvfbManager manager = new ControllerCreationCountingManager(creationCalls);
         XvfbRule rule = XvfbRule.builder().manager(manager).eager().build();
@@ -75,7 +71,6 @@ public class LazyRuleTest {
 
     @Test
     public void testLazy_multipleGetControllerCall() throws Exception {
-        Assume.assumeTrue("test can't run on windows", !windows);
         final AtomicInteger creationCalls = new AtomicInteger();
         XvfbManager manager = new ControllerCreationCountingManager(creationCalls);
         final XvfbRule rule = XvfbRule.builder().manager(manager).lazy().build();
@@ -91,7 +86,6 @@ public class LazyRuleTest {
 
     @Test
     public void testEager_multipleGetControllerCalls() throws Exception {
-        Assume.assumeTrue("test can't run on windows", !windows);
         final AtomicInteger creationCalls = new AtomicInteger();
         XvfbManager manager = new ControllerCreationCountingManager(creationCalls);
         final XvfbRule rule = XvfbRule.builder().manager(manager).eager().build();

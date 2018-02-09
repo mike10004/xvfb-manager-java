@@ -117,6 +117,11 @@ public class XvfbManager {
                     return null;
                 }
             }
+
+            @Override
+            public String toString() {
+                return "DefaultXvfbExecutableResolver";
+            }
         };
     }
 
@@ -431,5 +436,14 @@ public class XvfbManager {
 
     public ProcessTracker getProcessTracker() {
         return processTracker;
+    }
+
+    @Override
+    public String toString() {
+        return "XvfbManager{" +
+                "xvfbExecutableSupplier=" + xvfbExecutableSupplier +
+                ", xvfbConfig=" + xvfbConfig +
+                ", processTracker=" + processTracker +
+                '}';
     }
 }

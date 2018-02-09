@@ -2,6 +2,7 @@ package com.github.mike10004.xvfbtesting;
 
 import com.github.mike10004.xvfbtesting.LazyRuleTest.ControllerCreationCountingManager;
 import org.junit.After;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -12,6 +13,9 @@ import static org.junit.Assert.assertEquals;
 public class EagerNoInvocationTest {
 
     private final AtomicInteger creationCalls = new AtomicInteger();
+
+    @ClassRule
+    public static PlatformRule platformRule = PlatformRule.requireNotWindows();
 
     @Rule
     public final XvfbRule rule = XvfbRule.builder()

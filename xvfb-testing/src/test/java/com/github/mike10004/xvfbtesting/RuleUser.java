@@ -28,11 +28,19 @@ abstract class RuleUser {
 
     protected abstract void use(XvfbController ctrl) throws Exception;
 
-    protected void before() throws Exception {
+    protected void postBefore() throws Exception {
         // no op; override if needed
     }
 
-    protected void after() throws Exception {
+    protected void preAfter() throws Exception {
+        // no op; override if needed
+    }
+
+    protected void preBefore() throws Exception {
+        // no op; override if needed
+    }
+
+    protected void postAfter() throws Exception {
         // no op; override if needed
     }
 
@@ -44,16 +52,18 @@ abstract class RuleUser {
     public void test() throws Exception {
         // some comically deep nesting
         try {
+            preBefore();
             xvfb.before();
-            before();
+            postBefore();
             try {
                 getControllerAndUse(xvfb);
             } finally {
                 try {
-                    after();
+                    preAfter();
                 } finally {
                     xvfb.after();
                 }
+                postAfter();
             }
         } catch (Exception e) {
             throw e;

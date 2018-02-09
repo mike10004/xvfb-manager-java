@@ -8,6 +8,7 @@ import com.github.mike10004.nativehelper.subprocess.ProcessTracker;
 import com.github.mike10004.xvfbmanager.XvfbController;
 import com.github.mike10004.xvfbmanager.XvfbException;
 import com.github.mike10004.xvfbmanager.XvfbManager;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.junit.rules.ExternalResource;
@@ -16,17 +17,16 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
+import java.io.File;
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 @NotThreadSafe
 public class XvfbRule extends ExternalResource {
@@ -74,14 +74,23 @@ public class XvfbRule extends ExternalResource {
 
     static Supplier<Boolean> conjoinDisabledSuppliers(Iterable<Supplier<Boolean>> components) {
         ImmutableList<Supplier<Boolean>> frozenComponents = ImmutableList.copyOf(components);
-        return () -> {
-            for (Supplier<Boolean> component : frozenComponents) {
-                Boolean value = checkNotNull(component.get(), "returned null instead of a Boolean instance: %s", component);
-                if (value) {
-                    return true;
+        Supplier<String> frozenComponentsString = Suppliers.memoize(frozenComponents::toString);
+        return new Supplier<Boolean>() {
+            @Override
+            public Boolean get() {
+                for (Supplier<Boolean> component : frozenComponents) {
+                    Boolean value = checkNotNull(component.get(), "returned null instead of a Boolean instance: %s", component);
+                    if (value) {
+                        return true;
+                    }
                 }
+                return false;
             }
-            return false;
+
+            @Override
+            public String toString() {
+                return "ConjoinedSupplier{" + frozenComponentsString.get() + "}";
+            }
         };
     }
 
@@ -121,6 +130,11 @@ public class XvfbRule extends ExternalResource {
             }
 
         }
+
+        @Override
+        public String toString() {
+            return String.format("EmbeddedProcessTracker@%08x", System.identityHashCode(this));
+        }
     }
 
     /**
@@ -129,13 +143,34 @@ public class XvfbRule extends ExternalResource {
      */
     public static class Builder {
 
-        private static Supplier<Boolean> DISABLED_ON_WINDOWS = () -> Platforms.getPlatform().isWindows();
+        private static Supplier<Boolean> DISABLED_ON_WINDOWS = new Supplier<Boolean>() {
+            @Override
+            public Boolean get() {
+                return Platforms.getPlatform().isWindows();
+            }
 
-        private XvfbManager xvfbManager = new XvfbManager(new EmbeddedProcessTracker());
-        private Set<Supplier<Boolean>> disabledSuppliers = new LinkedHashSet<>();
-        private @Nullable Integer displayNumber;
+            @Override
+            public String toString() {
+                return "DisabledOnWindows";
+            }
+        };
+
+        private XvfbManager xvfbManager;
+        private final Set<Supplier<Boolean>> disabledSuppliers;
+        @Nullable
+        private Integer displayNumber;
         private TemporaryFolder temporaryFolder = new TemporaryFolder();
         private StartMode startMode = StartMode.LAZY;
+
+        private Builder() {
+            this(new XvfbManager(new EmbeddedProcessTracker()), Collections.singleton(DISABLED_ON_WINDOWS));
+        }
+
+        private Builder(XvfbManager xvfbManager, Collection<? extends Supplier<Boolean>> disabledSuppliers) {
+            this.xvfbManager = requireNonNull(xvfbManager);
+            this.disabledSuppliers = new LinkedHashSet<>();
+            this.disabledSuppliers.addAll(disabledSuppliers);
+        }
 
         /**
          * Builds a rule instance.
@@ -159,7 +194,6 @@ public class XvfbRule extends ExternalResource {
          * Sets the disabled flag to true.
          * @return this builder instance
          */
-        @SuppressWarnings("unused")
         public Builder disabled() {
             return disabled(true);
         }
@@ -170,7 +204,7 @@ public class XvfbRule extends ExternalResource {
          */
         @SuppressWarnings("BooleanParameter")
         public Builder disabled(boolean disabled) {
-            return disabled(() -> disabled);
+            return disabled(Suppliers.ofInstance(disabled));
         }
 
         /**
@@ -200,7 +234,6 @@ public class XvfbRule extends ExternalResource {
          * unless you were testing error conditions.
          * @return this builder instance
          */
-        @SuppressWarnings("unused")
         public Builder notDisabledOnWindows() {
             disabledSuppliers.remove(DISABLED_ON_WINDOWS);
             return this;
@@ -242,7 +275,7 @@ public class XvfbRule extends ExternalResource {
         }
 
         private Builder startMode(StartMode startMode) {
-            this.startMode = Objects.requireNonNull(startMode);
+            this.startMode = requireNonNull(startMode);
             return this;
         }
 
@@ -341,4 +374,23 @@ public class XvfbRule extends ExternalResource {
         }
     }
 
+    @Override
+    public String toString() {
+        return "XvfbRule{" +
+                "temporaryFolder=" + toString(temporaryFolder) +
+                ", initialDisplayNumber=" + initialDisplayNumber +
+                ", xvfbManager=" + xvfbManager +
+                ", disabledSupplier=" + disabledSupplier +
+                ", startMode=" + startMode +
+                '}';
+    }
+
+    private static String toString(TemporaryFolder temporaryFolder) {
+        File root = null;
+        try {
+            root = temporaryFolder.getRoot();
+        } catch (IllegalStateException ignore) {
+        }
+        return "TemporaryFolder{root=" + root + "}";
+    }
 }

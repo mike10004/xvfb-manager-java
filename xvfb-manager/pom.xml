@@ -10,31 +10,29 @@
     </parent>
     <artifactId>xvfb-manager</artifactId>
     <properties>
-        <org.slf4j.simpleLogger.defaultLogLevel>info</org.slf4j.simpleLogger.defaultLogLevel>
     </properties>
     <profiles>
-        <profile>
-            <id>verbose</id>
-            <properties>
-                <org.slf4j.simpleLogger.defaultLogLevel>trace</org.slf4j.simpleLogger.defaultLogLevel>
-            </properties>
-        </profile>
     </profiles>
     <build>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <artifactId>maven-surefire-plugin</artifactId>
-                    <configuration>
-                        <systemPropertyVariables>
-                            <org.slf4j.simpleLogger.defaultLogLevel>${org.slf4j.simpleLogger.defaultLogLevel}</org.slf4j.simpleLogger.defaultLogLevel>
-                            <java.io.tmpdir>${project.build.directory}</java.io.tmpdir>
-                        </systemPropertyVariables>
-                    </configuration>
-                </plugin>
-            </plugins>
-        </pluginManagement>
         <plugins>
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>display-config</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <echo>platform.windows = ${platform.windows}</echo>
+                                <echo>platform.notWindows = ${platform.notWindows}</echo>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
@@ -46,6 +44,7 @@
                             <goal>exec</goal>
                         </goals>
                         <configuration>
+                            <skip>${platform.windows}</skip>
                             <executable>find</executable>
                             <arguments>
                                 <argument>/tmp</argument>

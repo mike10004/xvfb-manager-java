@@ -9,6 +9,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
 
+/**
+ * Unit test that runs on all platforms. A lazy rule is created but {@link XvfbRule#getController()} is never
+ * invoked, so no attempt to execute an Xvfb process should be made.
+ */
 public class LazyNoInvocationTest {
 
     private final AtomicInteger creationCalls = new AtomicInteger();
