@@ -1,7 +1,5 @@
 version: 0.16.{build}
 image: Visual Studio 2017
-skip_commits:
-  message: "[skip appveyor]"
 build_script:
 - cmd: >-
     echo "JAVA_HOME=%JAVA_HOME%"
