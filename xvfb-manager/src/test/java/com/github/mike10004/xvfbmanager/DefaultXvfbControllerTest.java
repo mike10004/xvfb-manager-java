@@ -139,7 +139,7 @@ public class DefaultXvfbControllerTest {
 
     private <T> void testXwininfoParser_parse(XwininfoParser<T> parser, String stdout, int expectedRootChildCount) throws IOException {
         TreeNode<T> root = parser.parse(CharSource.wrap(stdout));
-        for (T label : root) {
+        for (T label : root.breadthFirstTraversal().labels()) {
             System.out.println(label);
         }
         assertEquals("root child count", expectedRootChildCount, root.getChildCount());
@@ -157,7 +157,7 @@ public class DefaultXvfbControllerTest {
     private <E> String reconstruct(TreeNode<E> root, int indentPerLevel) {
         StringWriter sw = new StringWriter(1024);
         PrintWriter out = new PrintWriter(sw);
-        List<? extends TreeNode<E>> enumeration = ImmutableList.copyOf(TreeNode.Utils.<E>traverser().preOrderTraversal(root));
+        List<? extends TreeNode<E>> enumeration = ImmutableList.copyOf(TreeNode.Utils.<E>traverser().depthFirstPreOrder(root));
         Iterator<? extends TreeNode<?>> poe = enumeration.iterator();
         int prevDepth = 0;
         while (poe.hasNext()) {

@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -276,11 +277,17 @@ public class DefaultXvfbController implements XvfbController {
             if (result != null && result.exitCode() == 0) {
                 try {
                     TreeNode<XWindow> root = CharSource.wrap(result.content().stdout()).readLines(new XwininfoXwindowParser());
-                    //noinspection StaticPseudoFunctionalStyleMethod
-                    final @Nullable XWindow match = Iterables.find(root, evaluator::test, null);
+                    @Nullable XWindow evaluatedNode = null;
+                    for (TreeNode<XWindow> node : root.breadthFirstTraversal()) {
+                        if (evaluator.test(node.getLabel())) {
+                            evaluatedNode = node.getLabel();
+                            break;
+                        }
+                    }
+                    final @Nullable XWindow match = evaluatedNode;
                     if (match != null) {
                         //noinspection StaticPseudoFunctionalStyleMethod
-                        TreeNode<XWindow> targetWindowNode = Iterables.find(Utils.<XWindow>traverser().breadthFirstTraversal(root), input -> match == checkNotNull(input).getLabel());
+                        TreeNode<XWindow> targetWindowNode = Iterables.find(Utils.<XWindow>traverser().breadthFirst(root), input -> match == checkNotNull(input).getLabel());
                         return resolve(targetWindowNode);
                     } else {
                         return continuePolling();
@@ -339,7 +346,7 @@ public class DefaultXvfbController implements XvfbController {
         protected abstract E parseWindow(String line, boolean root);
 
         @Override
-        public boolean processLine(@SuppressWarnings("NullableProblems") String line) throws IOException {
+        public boolean processLine(@SuppressWarnings("NullableProblems") String line) {
             if (line.trim().isEmpty()) {
                 return skip(line, "empty");
             }

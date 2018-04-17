@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.mike10004</groupId>
     <artifactId>xvfb-manager-parent</artifactId>
-    <version>0.16</version>
+    <version>0.17</version>
     <packaging>pom</packaging>
     <name>xvfb-manager-parent</name>
     <modules>
@@ -217,17 +217,7 @@
             <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
-                <version>23.0</version>
-            </dependency>
-            <dependency>
-                <groupId>org.seleniumhq.selenium</groupId>
-                <artifactId>selenium-java</artifactId>
-                <version>3.7.1</version>
-            </dependency>
-            <dependency>
-                <groupId>io.github.bonigarcia</groupId>
-                <artifactId>webdrivermanager</artifactId>
-                <version>1.6.2</version>
+                <version>24.1-jre</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>

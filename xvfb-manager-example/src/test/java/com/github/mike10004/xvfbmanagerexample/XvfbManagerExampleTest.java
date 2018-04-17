@@ -10,16 +10,12 @@ import io.github.mike10004.nanochamp.testing.NanoRule;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
-import org.openqa.selenium.WebDriverException;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.concurrent.Callable;
-import java.util.function.Predicate;
 
 import static org.apache.http.HttpStatus.SC_OK;
 
@@ -42,8 +38,8 @@ public class XvfbManagerExampleTest {
             throw new RuntimeException(e);
         }
         return NanoServer.builder()
-                .getPath(PAGE_PATH, NanoResponse.status(SC_OK).htmlUtf8(PAGE_HTML))
-                .getPath(CAT_PATH, NanoResponse.status(SC_OK).jpeg(imageBytes))
+                .getPath(PAGE_PATH, session -> NanoResponse.status(SC_OK).htmlUtf8(PAGE_HTML))
+                .getPath(CAT_PATH, session -> NanoResponse.status(SC_OK).jpeg(imageBytes))
                 .build();
     }
 

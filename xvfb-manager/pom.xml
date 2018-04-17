@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.github.mike10004</groupId>
         <artifactId>xvfb-manager-parent</artifactId>
-        <version>0.16</version>
+        <version>0.17</version>
     </parent>
     <artifactId>xvfb-manager</artifactId>
     <properties>
@@ -65,23 +65,24 @@
             <artifactId>native-helper</artifactId>
         </dependency>
         <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.6</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.github.mike10004</groupId>
             <artifactId>imnetio-helper</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.github.mike10004</groupId>
             <artifactId>xvfb-unittest-help</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>2.5</version>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -104,11 +105,6 @@
             <artifactId>imageio-pnm</artifactId>
             <version>3.2.1</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>2.7</version>
         </dependency>
         <dependency>
             <groupId>org.easymock</groupId>

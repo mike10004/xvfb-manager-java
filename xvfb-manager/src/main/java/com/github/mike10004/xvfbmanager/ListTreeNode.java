@@ -96,9 +96,21 @@ public class ListTreeNode<T> implements TreeNode<T> {
     }
 
     @Override
-    public Iterator<T> iterator() {
-        Function<TreeNode<T>, T> labelGetter = TreeNode.Utils.labelFunction();
-        return Iterators.transform(TreeNode.Utils.<T>traverser().breadthFirstTraversal(this).iterator(), labelGetter::apply);
+    public NodeTraversal<T> breadthFirstTraversal() {
+        Iterable<TreeNode<T>> bf = TreeNode.Utils.<T>traverser().breadthFirst(this);
+        return new NodeTraversal<T>() {
+            @Override
+            public Iterable<T> labels() {
+                Function<TreeNode<T>, T> f = TreeNode.Utils.labelFunction();
+                //noinspection StaticPseudoFunctionalStyleMethod
+                return Iterables.transform(bf, f::apply);
+            }
+
+            @Override
+            public Iterator<TreeNode<T>> iterator() {
+                return bf.iterator();
+            }
+        };
     }
 
     @Override

@@ -7,7 +7,7 @@ import com.github.mike10004.xvfbmanager.XvfbController;
 import com.github.mike10004.xvfbmanager.XvfbManager;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
-import io.github.bonigarcia.wdm.BrowserManager;
+import io.github.bonigarcia.wdm.WebDriverManager;
 import io.github.bonigarcia.wdm.ChromeDriverManager;
 import io.github.bonigarcia.wdm.FirefoxDriverManager;
 import org.openqa.selenium.OutputType;
@@ -117,7 +117,7 @@ public class XvfbManagerExample {
                     return new WebDriverAsset() {
                         @Override
                         public void setupDriver() {
-                            BrowserManager mgr = FirefoxDriverManager.getInstance();
+                            WebDriverManager mgr = FirefoxDriverManager.getInstance();
                             mgr.version(FIREFOX_DRIVER_VERSION).setup();
                         }
 

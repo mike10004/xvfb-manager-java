@@ -1,20 +1,43 @@
 package com.github.mike10004.xvfbmanager;
 
+import com.google.common.graph.SuccessorsFunction;
+import com.google.common.graph.Traverser;
+
 import java.util.function.Function;
-import com.google.common.collect.TreeTraverser;
 
 /**
  * Interface that represents a node in a tree data structure.
  * Nodes of this type are aware of their parents and children.
  * @param <T> node label type
  */
-public interface TreeNode<T> extends Iterable<T> {
+public interface TreeNode<T> {
 
     /**
      * Gets an iterable of this node's children
      * @return an iterable of this node's children; never null
      */
     Iterable<TreeNode<T>> children();
+
+    /**
+     * Gets an iterable that provides a breadth-first iteration
+     * of nodes in the tree rooted at this node. The iteration
+     * includes this node.
+     * @return an iterable
+     */
+    NodeTraversal<T> breadthFirstTraversal();
+
+    /**
+     * Interface defining a tree node traversal. A traversal
+     * is an iteration over the nodes of the tree.
+     * @param <T> node label type
+     */
+    interface NodeTraversal<T> extends Iterable<TreeNode<T>> {
+        /**
+         * Gets a transformed version of this traversal that iterates over the labels instead of the nodes.
+         * @return an iterable over the labels
+         */
+        Iterable<T> labels();
+    }
 
     /**
      * Gets the level, which is the distance to the root. The level of the
@@ -80,14 +103,13 @@ public interface TreeNode<T> extends Iterable<T> {
          * @param <E> the tree node label type
          * @return a traverser
          */
-        public static <E> TreeTraverser<TreeNode<E>> traverser() {
-            return new TreeTraverser<TreeNode<E>>() {
+        public static <E> Traverser<TreeNode<E>> traverser() {
+            return Traverser.forTree(new SuccessorsFunction<TreeNode<E>>() {
                 @Override
-                public Iterable<TreeNode<E>> children(@SuppressWarnings("NullableProblems") TreeNode root) {
-                    //noinspection unchecked
-                    return root.children();
+                public Iterable<? extends TreeNode<E>> successors(TreeNode<E> node) {
+                    return node.children();
                 }
-            };
+            });
         }
 
         /**

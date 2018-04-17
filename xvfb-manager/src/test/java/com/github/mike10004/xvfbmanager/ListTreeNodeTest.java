@@ -14,7 +14,7 @@ public class ListTreeNodeTest {
                 .addChild(l1 = node(1))
                 .addChild(node(1).addChild(l2 = node(2)).addChild(node(2).addChild(l3 = node(3))))
                 .addChild(node(1));
-        System.out.format("bfs: %s%n", Iterables.toString(root));
+        System.out.format("bfs: %s%n", Iterables.toString(root.breadthFirstTraversal().labels()));
         assertEquals("level", 0, root.getLevel());
         assertEquals("level", 1, l1.getLevel());
         assertEquals("level", 2, l2.getLevel());
