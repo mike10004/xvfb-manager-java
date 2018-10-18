@@ -1,6 +1,3 @@
-/*
- * (c) 2016 mike chaberski
- */
 package com.github.mike10004.xvfbunittesthelp;
 
 import com.github.mike10004.nativehelper.Whicher;

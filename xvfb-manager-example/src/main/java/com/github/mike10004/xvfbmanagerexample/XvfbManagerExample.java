@@ -1,6 +1,3 @@
-/*
- * (c) 2016 mike chaberski
- */
 package com.github.mike10004.xvfbmanagerexample;
 
 import com.github.mike10004.xvfbmanager.XvfbController;

@@ -1,6 +1,3 @@
-/*
- * (c) 2016 Mike Chaberski
- */
 package com.github.mike10004.xvfbmanager;
 
 import static com.google.common.base.Preconditions.checkArgument;

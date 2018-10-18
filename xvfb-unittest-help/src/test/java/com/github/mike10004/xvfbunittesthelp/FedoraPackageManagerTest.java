@@ -9,11 +9,6 @@ import java.util.Optional;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-/*
- * (c) 2016 Mike Chaberski
- *
- * Created by mike
- */
 public class FedoraPackageManagerTest {
 
     private static FedoraPackageManager instance;

@@ -1,6 +1,3 @@
-/*
- * (c) 2016 Mike Chaberski
- */
 package com.github.mike10004.xvfbmanager;
 
 import com.galenframework.rainbow4j.Rainbow4J;

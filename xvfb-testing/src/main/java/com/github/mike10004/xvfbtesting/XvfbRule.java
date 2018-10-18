@@ -1,6 +1,3 @@
-/*
- * (c) 2016 mike chaberski
- */
 package com.github.mike10004.xvfbtesting;
 
 import com.github.mike10004.nativehelper.Platforms;
