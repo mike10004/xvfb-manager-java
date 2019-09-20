@@ -1,6 +1,6 @@
 package com.github.mike10004.xvfbmanager;
 
-import com.github.mike10004.nativehelper.subprocess.ProcessMonitor;
+import io.github.mike10004.subprocess.ProcessMonitor;
 import com.github.mike10004.xvfbmanager.DefaultXvfbController.XLockFileChecker;
 import com.github.mike10004.xvfbmanager.DefaultXvfbController.XwininfoParser;
 import com.github.mike10004.xvfbmanager.DefaultXvfbController.XwininfoXwindowParser;

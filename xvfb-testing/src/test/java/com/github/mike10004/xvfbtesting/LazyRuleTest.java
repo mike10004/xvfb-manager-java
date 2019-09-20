@@ -1,6 +1,6 @@
 package com.github.mike10004.xvfbtesting;
 
-import com.github.mike10004.nativehelper.subprocess.ProcessMonitor;
+import io.github.mike10004.subprocess.ProcessMonitor;
 import com.github.mike10004.xvfbmanager.DefaultXvfbController;
 import com.github.mike10004.xvfbmanager.XvfbController;
 import com.github.mike10004.xvfbmanager.XvfbManager;

@@ -1,9 +1,10 @@
 package com.github.mike10004.xvfbunittesthelp;
 
-import com.github.mike10004.nativehelper.subprocess.ProcessMonitor;
-import com.github.mike10004.nativehelper.subprocess.ProcessResult;
-import com.github.mike10004.nativehelper.subprocess.ScopedProcessTracker;
-import com.github.mike10004.nativehelper.subprocess.Subprocess;
+import io.github.mike10004.subprocess.ProcessMonitor;
+import io.github.mike10004.subprocess.ProcessResult;
+import io.github.mike10004.subprocess.ScopedProcessTracker;
+import io.github.mike10004.subprocess.StreamInput;
+import io.github.mike10004.subprocess.Subprocess;
 import com.google.common.io.ByteSource;
 
 import javax.annotation.Nullable;
@@ -18,9 +19,13 @@ public class Processes {
     }
 
     public static ProcessResult<String, String> runOrDie(Subprocess subprocess, Charset programOutputCharset, @Nullable ByteSource stdin) {
+        StreamInput stdinSource = null;
+        if (stdin != null) {
+            stdinSource = stdin::openStream;
+        }
         try (ScopedProcessTracker tracker = new ScopedProcessTracker()) {
             ProcessMonitor<String, String> monitor = subprocess.launcher(tracker)
-                    .outputStrings(programOutputCharset, stdin)
+                    .outputStrings(programOutputCharset, stdinSource)
                     .launch();
             return monitor.await();
         } catch (InterruptedException e) {

@@ -1,9 +1,9 @@
 package com.github.mike10004.xvfbmanager;
 
-import com.github.mike10004.nativehelper.subprocess.ProcessMonitor;
-import com.github.mike10004.nativehelper.subprocess.ProcessResult;
-import com.github.mike10004.nativehelper.subprocess.ProcessTracker;
-import com.github.mike10004.nativehelper.subprocess.Subprocess;
+import io.github.mike10004.subprocess.ProcessMonitor;
+import io.github.mike10004.subprocess.ProcessResult;
+import io.github.mike10004.subprocess.ProcessTracker;
+import io.github.mike10004.subprocess.Subprocess;
 import com.github.mike10004.xvfbmanager.Screenshot.FileByteSource;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.ByteSource;
@@ -103,7 +103,7 @@ public class XwdFileToPngConverter implements ScreenshotConverter<Screenshot, Im
                 .args("-")
                 .build()
                 .launcher(processTracker)
-                .outputFiles(pnmFile, stderrFile, Files.asByteSource(inputFile))
+                .outputFiles(pnmFile, stderrFile, Files.asByteSource(inputFile)::openStream)
                 .launch();
         ProcessResult<File, File> result = null;
         try {

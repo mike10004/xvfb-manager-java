@@ -1,10 +1,11 @@
 package com.github.mike10004.xvfbmanager;
 
 import com.github.mike10004.nativehelper.Whicher;
-import com.github.mike10004.nativehelper.subprocess.ProcessMonitor;
-import com.github.mike10004.nativehelper.subprocess.ProcessResult;
-import com.github.mike10004.nativehelper.subprocess.ProcessTracker;
-import com.github.mike10004.nativehelper.subprocess.Subprocess;
+import com.google.common.util.concurrent.JdkFutureAdapters;
+import io.github.mike10004.subprocess.ProcessMonitor;
+import io.github.mike10004.subprocess.ProcessResult;
+import io.github.mike10004.subprocess.ProcessTracker;
+import io.github.mike10004.subprocess.Subprocess;
 import com.github.mike10004.xvfbmanager.Poller.PollOutcome;
 import com.github.mike10004.xvfbmanager.Poller.StopReason;
 import com.google.common.base.Suppliers;
@@ -14,6 +15,7 @@ import com.google.common.io.Files;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.github.mike10004.subprocess.SubprocessLaunchSupport;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -40,7 +42,6 @@ import static java.util.Objects.requireNonNull;
 public class XvfbManager {
 
     private static final Logger log = LoggerFactory.getLogger(XvfbManager.class);
-    private static final ProcessTracker GLOBAL_PROCESS_TRACKER = ProcessTracker.create();
 
     private static final int SCREEN = 0;
 
@@ -82,7 +83,7 @@ public class XvfbManager {
      * @param xvfbConfig virtual framebuffer configuration
      */
     public XvfbManager(Supplier<File> xvfbExecutableSupplier, XvfbConfig xvfbConfig) {
-        this(xvfbExecutableSupplier, xvfbConfig, GLOBAL_PROCESS_TRACKER);
+        this(xvfbExecutableSupplier, xvfbConfig, ShutdownHookProcessTracker.getInstance());
     }
 
     public XvfbManager(ProcessTracker processTracker) {
@@ -222,24 +223,23 @@ public class XvfbManager {
         File stderrFile = File.createTempFile("xvfb-stderr", ".txt", scratchDir.toFile());
         Subprocess xvfbSubprocess = pb.build();
         log.trace("executing {}", xvfbSubprocess);
-        Subprocess.Launcher<File, File> launcher = xvfbSubprocess.launcher(processTracker)
+        SubprocessLaunchSupport<File, File> launcher = xvfbSubprocess.launcher(processTracker)
                 .outputFiles(stdoutFile, stderrFile);
         ProcessMonitor<File, File> xvfbMonitor = launcher.launch();
         Executor callbacker = getCallbackExecutor();
-        Futures.addCallback(xvfbMonitor.future(), new LoggingCallback<>("xvfb"), callbacker);
+        Futures.addCallback(JdkFutureAdapters.listenInPoolThread(xvfbMonitor.future()), new LoggingCallback<>("xvfb"), callbacker);
         if (scratchDirProvider.isDeleteOnStop()) {
-            Futures.addCallback(xvfbMonitor.future(), new DirectoryDeletingCallback<>(scratchDir.toFile()), callbacker);
+            Futures.addCallback(JdkFutureAdapters.listenInPoolThread(xvfbMonitor.future()), new DirectoryDeletingCallback<>(scratchDir.toFile()), callbacker);
         }
         if (AUTO_DISPLAY) {
             File outputFileContainingDisplay = selectCorrespondingFile(DISPLAY_RECEIVER_FD, stdoutFile, stderrFile);
             int autoDisplayNumber = pollForDisplayNumber(Files.asCharSource(outputFileContainingDisplay, XVFB_OUTPUT_CHARSET));
             display = toDisplayValue(autoDisplayNumber);
         } else {
-            //noinspection ConstantConditions
             checkState(display != null, "display should have been set manually from %s", displayNumber);
         }
         DefaultXvfbController controller = createController(xvfbMonitor, display, framebufferDir.toFile());
-        Futures.addCallback(xvfbMonitor.future(), new AbortFlagSetter<>(controller), callbacker);
+        Futures.addCallback(JdkFutureAdapters.listenInPoolThread(xvfbMonitor.future()), new AbortFlagSetter<>(controller), callbacker);
         return controller;
     }
 

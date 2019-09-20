@@ -1,7 +1,7 @@
 package com.github.mike10004.xvfbtesting;
 
 import com.github.mike10004.nativehelper.Platforms;
-import com.github.mike10004.nativehelper.subprocess.ProcessLaunchException;
+import io.github.mike10004.subprocess.SubprocessLaunchException;
 import com.github.mike10004.xvfbmanager.XvfbController;
 import org.junit.Assume;
 import org.junit.BeforeClass;
@@ -104,7 +104,7 @@ public class XvfbRule_ForceWindowsTest {
         try {
             ruleUser.test();
             assertFalse("exception should be thrown if invokeGetController is true", testCase.invokeGetController);
-        } catch (ProcessLaunchException e) {
+        } catch (SubprocessLaunchException e) {
             assertTrue("cause should be IOException 'Cannot run program'", e.getCause() instanceof IOException);
             assertTrue("no exception should be thrown when invokeGetController is false: " + e, testCase.invokeGetController || testCase.eagerStart);
         }

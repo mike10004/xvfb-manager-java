@@ -1,9 +1,5 @@
 package com.github.mike10004.xvfbmanager;
 
-import com.github.mike10004.nativehelper.subprocess.ProcessMonitor;
-import com.github.mike10004.nativehelper.subprocess.ProcessResult;
-import com.github.mike10004.nativehelper.subprocess.ProcessTracker;
-import com.github.mike10004.nativehelper.subprocess.Subprocess;
 import com.github.mike10004.xvfbmanager.Poller.PollOutcome;
 import com.github.mike10004.xvfbmanager.Poller.StopReason;
 import com.github.mike10004.xvfbmanager.TreeNode.Utils;
@@ -15,6 +11,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.github.mike10004.subprocess.ProcessMonitor;
+import io.github.mike10004.subprocess.ProcessResult;
+import io.github.mike10004.subprocess.ProcessTracker;
+import io.github.mike10004.subprocess.Subprocess;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -172,7 +171,7 @@ public class DefaultXvfbController implements XvfbController {
     @Override
     public void stop() {
         if (xvfbMonitor.process().isAlive()) {
-            xvfbMonitor.destructor().sendTermSignal().timeout(SIGTERM_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS).kill();
+            xvfbMonitor.destructor().sendTermSignal().await(SIGTERM_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS).kill();
             waitForXLockFileCleanup();
         }
     }
@@ -268,7 +267,7 @@ public class DefaultXvfbController implements XvfbController {
             } catch (InterruptedException e) {
                 log.error("interrupted while waiting for xwininfo result", e);
                 xwininfoMonitor.destructor().sendTermSignal()
-                        .timeout(XWININFO_SIGTERM_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
+                        .await(XWININFO_SIGTERM_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
                         .kill();
             }
             if (result != null && result.exitCode() == 0) {

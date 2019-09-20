@@ -1,11 +1,12 @@
 package com.github.mike10004.xvfbmanager;
 
-import com.github.mike10004.xvfbunittesthelp.Assumptions;
-import com.github.mike10004.xvfbunittesthelp.PackageManager;
-import com.google.common.io.Files;
 import com.github.mike10004.common.image.ImageInfo;
 import com.github.mike10004.common.image.ImageInfos;
 import com.github.mike10004.common.io.ByteSources;
+import com.github.mike10004.xvfbunittesthelp.Assumptions;
+import com.github.mike10004.xvfbunittesthelp.PackageManager;
+import com.github.mike10004.xvfbunittesthelp.ProcessTrackerRule;
+import com.google.common.io.Files;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -13,7 +14,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class XwdFileToPngConverterTest {
 

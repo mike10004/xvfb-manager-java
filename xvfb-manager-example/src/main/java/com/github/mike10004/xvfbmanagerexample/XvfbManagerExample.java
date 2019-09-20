@@ -102,51 +102,36 @@ public class XvfbManagerExample {
     }
 
     private interface WebDriverAsset {
-        String FIREFOX_DRIVER_VERSION = "0.16.1";
-        String CHROME_DRIVER_VERSION = "2.27";
-        Collection<String> SUPPORTED = Collections.unmodifiableList(Arrays.asList("chrome", "firefox"));
+
+        Collection<String> SUPPORTED = Collections.unmodifiableList(Arrays.asList("firefox"));
+
         void setupDriver();
+
         WebDriver createDriver(String display);
+
         static WebDriverAsset getAsset(String browserKey) {
-            switch (browserKey) {
-                case "firefox":
-                    String firefoxBin = System.getenv(ENV_FIREFOX_BIN);
-                    return new WebDriverAsset() {
-                        @Override
-                        public void setupDriver() {
-                            WebDriverManager mgr = FirefoxDriverManager.getInstance();
-                            mgr.version(FIREFOX_DRIVER_VERSION).setup();
-                        }
+            if ("firefox".equals(browserKey)) {
+                String firefoxBin = System.getenv(ENV_FIREFOX_BIN);
+                return new WebDriverAsset() {
+                    @Override
+                    public void setupDriver() {
+                        WebDriverManager mgr = FirefoxDriverManager.getInstance();
+                        mgr.setup();
+                    }
 
-                        @Override
-                        public WebDriver createDriver(String display) {
-                            Map<String, String> env = ImmutableMap.of("DISPLAY", display);
-                            if (firefoxBin != null) {
-                                System.out.format("using firefox binary path from environment variable %s: %s%n", ENV_FIREFOX_BIN, firefoxBin);
-                                return create(env, new FirefoxBinary(new File(firefoxBin)), new FirefoxProfile(), new FirefoxOptions());
-                            } else {
-                                return create(env, null, new FirefoxProfile(), new FirefoxOptions());
-                            }
+                    @Override
+                    public WebDriver createDriver(String display) {
+                        Map<String, String> env = ImmutableMap.of("DISPLAY", display);
+                        if (firefoxBin != null) {
+                            System.out.format("using firefox binary path from environment variable %s: %s%n", ENV_FIREFOX_BIN, firefoxBin);
+                            return create(env, new FirefoxBinary(new File(firefoxBin)), new FirefoxProfile(), new FirefoxOptions());
+                        } else {
+                            return create(env, null, new FirefoxProfile(), new FirefoxOptions());
                         }
-                    };
-                case "chrome":
-                    return new WebDriverAsset() {
-                        @Override
-                        public void setupDriver() {
-                            ChromeDriverManager.getInstance().version(CHROME_DRIVER_VERSION).setup();
-                        }
-
-                        @Override
-                        public WebDriver createDriver(String display) {
-                            ChromeDriverService.Builder builder = new ChromeDriverService.Builder().usingAnyFreePort();
-                            builder.withEnvironment(ImmutableMap.of("DISPLAY", display));
-                            ChromeOptions options = new ChromeOptions();
-                            return new ChromeDriver(builder.build(), options);
-                        }
-                    };
-                default:
-                    throw new IllegalArgumentException("browser not supported: " + browserKey);
+                    }
+                };
             }
+            throw new IllegalArgumentException("browser not supported: " + browserKey);
         }
     }
 

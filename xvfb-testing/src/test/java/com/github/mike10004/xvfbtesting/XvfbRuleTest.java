@@ -1,9 +1,11 @@
 package com.github.mike10004.xvfbtesting;
 
-import com.github.mike10004.nativehelper.subprocess.ProcessMonitor;
-import com.github.mike10004.nativehelper.subprocess.ProcessResult;
-import com.github.mike10004.nativehelper.subprocess.ProcessTracker;
-import com.github.mike10004.nativehelper.subprocess.Subprocess;
+import com.github.mike10004.xvfbunittesthelp.ProcessTrackerRule;
+import com.google.common.util.concurrent.JdkFutureAdapters;
+import io.github.mike10004.subprocess.ProcessMonitor;
+import io.github.mike10004.subprocess.ProcessResult;
+import io.github.mike10004.subprocess.ProcessTracker;
+import io.github.mike10004.subprocess.Subprocess;
 import com.github.mike10004.xvfbmanager.TreeNode;
 import com.github.mike10004.xvfbmanager.XvfbController;
 import com.github.mike10004.xvfbmanager.XvfbController.XWindow;
@@ -48,10 +50,11 @@ public class XvfbRuleTest {
     private static final AtomicInteger displayNumbers = new AtomicInteger(FIRST_DISPLAY_NUMBER);
     private static final boolean takeScreenshot = false;
 
-    private static ProcessTracker GLOBAL_PROCESS_TRACKER = ProcessTracker.create();
+    @Rule
+    public final ProcessTrackerRule processTrackerRule = new ProcessTrackerRule();
 
     @Rule
-    public TemporaryFolder tmp = new TemporaryFolder();
+    public final TemporaryFolder tmp = new TemporaryFolder();
 
     @BeforeClass
     public static void checkPrerequisities() throws IOException {
@@ -63,7 +66,7 @@ public class XvfbRuleTest {
         }
     }
 
-    private static class XMessageTester extends RuleUser {
+    private class XMessageTester extends RuleUser {
 
         private final File tempDir;
 
@@ -79,6 +82,7 @@ public class XvfbRuleTest {
 
         @Override
         protected void use(XvfbController ctrl) throws Exception {
+            ProcessTracker GLOBAL_PROCESS_TRACKER = processTrackerRule.getTracker();
             ctrl.waitUntilReady(Tests.getReadinessPollIntervalMs(), Tests.getMaxReadinessPolls());
             ProcessMonitor<String, String> xmessageMonitor = Subprocess.running("/usr/bin/xmessage")
                     .env("DISPLAY", ctrl.getDisplay())
@@ -87,7 +91,7 @@ public class XvfbRuleTest {
                     .launcher(GLOBAL_PROCESS_TRACKER)
                     .outputStrings(Charset.defaultCharset())
                     .launch();
-            Futures.addCallback(xmessageMonitor.future(), new PrintingCallback<>("xmessage"), MoreExecutors.directExecutor());
+            Futures.addCallback(JdkFutureAdapters.listenInPoolThread(xmessageMonitor.future()), new PrintingCallback<>("xmessage"), MoreExecutors.directExecutor());
             TreeNode<XWindow> xmessageWindow = ctrl.pollForWindow(window -> window != null && "xmessage".equals(window.title), 250, 8).orElse(null);
             System.out.format("xmessage window: %s%n", xmessageWindow);
             assertNotNull("xmessage window", xmessageWindow);

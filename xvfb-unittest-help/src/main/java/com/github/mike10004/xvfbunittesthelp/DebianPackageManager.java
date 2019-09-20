@@ -1,9 +1,9 @@
 package com.github.mike10004.xvfbunittesthelp;
 
-import com.github.mike10004.nativehelper.subprocess.ProcessResult;
-import com.github.mike10004.nativehelper.subprocess.Subprocess;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
+import io.github.mike10004.subprocess.ProcessResult;
+import io.github.mike10004.subprocess.Subprocess;
 
 import java.io.IOException;
 import java.util.List;

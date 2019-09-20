@@ -1,9 +1,10 @@
 package com.github.mike10004.xvfbmanager;
 
-import com.github.mike10004.nativehelper.subprocess.ProcessMonitor;
-import com.github.mike10004.nativehelper.subprocess.ProcessResult;
-import com.github.mike10004.nativehelper.subprocess.ProcessTracker;
 import com.google.common.collect.ImmutableSet;
+import io.github.mike10004.subprocess.ProcessMonitor;
+import io.github.mike10004.subprocess.ProcessResult;
+import io.github.mike10004.subprocess.ProcessTracker;
+import io.github.mike10004.subprocess.Subprocess;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,7 +12,6 @@ import java.nio.charset.Charset;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-import static com.github.mike10004.nativehelper.subprocess.Subprocess.running;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -48,7 +48,7 @@ public class DefaultDisplayReadinessChecker implements XvfbManager.DisplayReadin
      */
     @Override
     public boolean checkReadiness(String display) {
-        ProcessMonitor<String, String> monitor = running("xdpyinfo")
+        ProcessMonitor<String, String> monitor = Subprocess.running("xdpyinfo")
                 .args("-display", display)
                 .build()
                 .launcher(processTracker)

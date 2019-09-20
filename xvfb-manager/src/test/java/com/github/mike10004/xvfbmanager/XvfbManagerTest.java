@@ -5,10 +5,11 @@ import com.galenframework.rainbow4j.Spectrum;
 import com.galenframework.rainbow4j.colorscheme.ColorDistribution;
 import com.github.mike10004.common.image.ImageInfo;
 import com.github.mike10004.common.image.ImageInfos;
-import com.github.mike10004.nativehelper.subprocess.ProcessMonitor;
-import com.github.mike10004.nativehelper.subprocess.ProcessResult;
-import com.github.mike10004.nativehelper.subprocess.ProcessTracker;
-import com.github.mike10004.nativehelper.subprocess.Subprocess;
+import com.github.mike10004.xvfbunittesthelp.ProcessTrackerRule;
+import io.github.mike10004.subprocess.ProcessMonitor;
+import io.github.mike10004.subprocess.ProcessResult;
+import io.github.mike10004.subprocess.ProcessTracker;
+import io.github.mike10004.subprocess.Subprocess;
 import com.github.mike10004.xvfbmanager.XvfbController.XWindow;
 import com.github.mike10004.xvfbunittesthelp.Assumptions;
 import com.github.mike10004.xvfbunittesthelp.PackageManager;
@@ -154,7 +155,7 @@ public class XvfbManagerTest {
             Screenshot afterScreenshot = ctrl.getScreenshooter().capture();
             checkScreenshot(afterScreenshot, false, config);
         }
-        graphicalProgramFuture.destructor().sendTermSignal().timeout(1, TimeUnit.SECONDS).kill();
+        graphicalProgramFuture.destructor().sendTermSignal().await(1, TimeUnit.SECONDS).kill();
     }
 
     private ProcessMonitor<String, String> launchProgramOnDisplay(String display, File imageFile) {

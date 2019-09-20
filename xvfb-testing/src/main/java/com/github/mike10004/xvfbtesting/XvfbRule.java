@@ -1,7 +1,7 @@
 package com.github.mike10004.xvfbtesting;
 
 import com.github.mike10004.nativehelper.Platforms;
-import com.github.mike10004.nativehelper.subprocess.ProcessTracker;
+import io.github.mike10004.subprocess.ProcessTracker;
 import com.github.mike10004.xvfbmanager.XvfbController;
 import com.github.mike10004.xvfbmanager.XvfbException;
 import com.github.mike10004.xvfbmanager.XvfbManager;

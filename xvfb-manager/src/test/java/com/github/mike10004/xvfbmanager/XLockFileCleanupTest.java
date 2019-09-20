@@ -2,9 +2,9 @@ package com.github.mike10004.xvfbmanager;
 
 import com.github.mike10004.nativehelper.Platforms;
 import com.github.mike10004.nativehelper.Whicher;
-import com.github.mike10004.nativehelper.subprocess.ProcessMonitor;
-import com.github.mike10004.nativehelper.subprocess.ScopedProcessTracker;
-import com.github.mike10004.nativehelper.subprocess.Subprocess;
+import io.github.mike10004.subprocess.ProcessMonitor;
+import io.github.mike10004.subprocess.ScopedProcessTracker;
+import io.github.mike10004.subprocess.Subprocess;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.io.FileUtils;
 import org.junit.Assume;
