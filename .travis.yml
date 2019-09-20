@@ -4,15 +4,14 @@ addons:
     packages:
     - imagemagick
     - xdotool
-    - chromium-browser
     - netpbm
   firefox: "latest"
 notifications:
   email: false
 before_install:
-  - dpkg-query -l xvfb chromium-browser imagemagick
+  - dpkg-query -l xvfb imagemagick
   - cat ~/.m2/settings.xml
 install: mvn compile test-compile
 before_script:
   - find /tmp -maxdepth 1 -iname ".X*"
-script: mvn --settings travis-maven-settings.xml install -B -Ptravis -Dwdm.gitHubTokenName=$GITHUB_TOKEN_NAME -Dwdm.gitHubTokenSecret=$GITHUB_TOKEN_SECRET -Dwdm.geckoDriverVersion=$GECKODRIVER_VERSION
+script: mvn $MORE_MAVEN_OPTS --settings travis-maven-settings.xml install -B -Ptravis -Dwdm.gitHubTokenName=$GITHUB_TOKEN_NAME -Dwdm.gitHubTokenSecret=$GITHUB_TOKEN_SECRET -Dwdm.geckoDriverVersion=$GECKODRIVER_VERSION
