@@ -103,7 +103,7 @@ public class XvfbManagerExample {
 
     private interface WebDriverAsset {
 
-        Collection<String> SUPPORTED = Collections.unmodifiableList(Arrays.asList("firefox"));
+        Collection<String> SUPPORTED = Collections.unmodifiableList(Collections.singletonList("firefox"));
 
         void setupDriver();
 
@@ -115,7 +115,7 @@ public class XvfbManagerExample {
                 return new WebDriverAsset() {
                     @Override
                     public void setupDriver() {
-                        WebDriverManager mgr = FirefoxDriverManager.getInstance();
+                        WebDriverManager mgr = WebDriverManager.firefoxdriver();
                         mgr.setup();
                     }
 

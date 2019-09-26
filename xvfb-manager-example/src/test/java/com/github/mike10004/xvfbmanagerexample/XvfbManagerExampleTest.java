@@ -3,6 +3,7 @@ package com.github.mike10004.xvfbmanagerexample;
 import com.github.mike10004.xvfbunittesthelp.Assumptions;
 import com.github.mike10004.xvfbunittesthelp.PackageManager;
 import com.google.common.base.Preconditions;
+import com.google.common.hash.Hashing;
 import com.google.common.io.Resources;
 import io.github.mike10004.nanochamp.server.NanoResponse;
 import io.github.mike10004.nanochamp.server.NanoServer;
@@ -16,7 +17,9 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Properties;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.apache.http.HttpStatus.SC_OK;
 
 public class XvfbManagerExampleTest {
@@ -51,7 +54,11 @@ public class XvfbManagerExampleTest {
         String ghTokenSecret = System.getProperty("wdm.gitHubTokenSecret", "");
         Preconditions.checkState(!ghTokenName.startsWith("$")); // indicates env var usage error
         Preconditions.checkState(!ghTokenSecret.startsWith("$"));
-        System.out.format("github token name/secret have lengths %d and %d%n", ghTokenName.length(), ghTokenSecret.length());
+        System.out.format("github token name \"%s\" has secret of length %d with SHA256 hash %s%n", ghTokenName, ghTokenSecret.length(), Hashing.sha256().hashString(ghTokenSecret, US_ASCII));
+        Properties sysprops = System.getProperties();
+        sysprops.stringPropertyNames().stream().filter(n -> n.startsWith("wdm.") && n.endsWith("ersion")).forEach(n -> {
+            System.out.format("system property %s = %s%n", n, sysprops.getProperty(n));
+        });
     }
 
     @org.junit.Test
