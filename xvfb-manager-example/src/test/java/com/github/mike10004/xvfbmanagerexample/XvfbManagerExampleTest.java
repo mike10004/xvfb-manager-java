@@ -54,8 +54,7 @@ public class XvfbManagerExampleTest {
         String ghTokenSecret = System.getProperty("wdm.gitHubTokenSecret", "");
         Preconditions.checkState(!ghTokenName.startsWith("$")); // indicates env var usage error
         Preconditions.checkState(!ghTokenSecret.startsWith("$"));
-        System.out.format("github token name \"%s\" has secret of length %d with SHA256 hash %s%n", ghTokenName, ghTokenSecret.length(), Hashing.sha256().hashString(ghTokenSecret, US_ASCII));
-        Properties sysprops = System.getProperties();
+        System.out.format("github token secret has length %d with SHA512 hash %s%n", ghTokenSecret.length(), Hashing.sha512().hashString(ghTokenSecret, US_ASCII));        Properties sysprops = System.getProperties();
         sysprops.stringPropertyNames().stream().filter(n -> n.startsWith("wdm.") && n.endsWith("ersion")).forEach(n -> {
             System.out.format("system property %s = %s%n", n, sysprops.getProperty(n));
         });
