@@ -10,11 +10,12 @@ notifications:
   email: false
 before_install:
   - dpkg-query -l xvfb imagemagick
+  - which firefox
   - cat ~/.m2/settings.xml
 install: mvn $MORE_MAVEN_OPTS dependency:go-offline compile test-compile
 before_script:
   - find /tmp -maxdepth 1 -iname ".X*"
-script: |
+script: >-
   mvn $MORE_MAVEN_OPTS
   --settings travis-maven-settings.xml --batch-mode -Ptravis
   -Dwdm.gitHubTokenName=$GITHUB_TOKEN_NAME
