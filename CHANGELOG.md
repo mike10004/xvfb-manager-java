@@ -1,6 +1,17 @@
 Changelog
 =========
 
+0.19
+----
+
+* change subprocess library
+* upgrade some dependencies
+
+0.4 thru 0.18
+-------------
+
+¯\\\_(ツ)\_/¯
+
 0.3
 ---
 
